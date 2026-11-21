@@ -1,3 +1,5 @@
+"use client";
+import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader, PageSection } from "@/components/layout/page";
 import { Grid, GridItem } from "@/components/layout/stack";
@@ -10,8 +12,14 @@ import { FEEDBACK_EXAMPLE as example } from "@/lib/feedback-example";
 import { SpeechPlaybackSettings } from "@/components/speech-playback";
 import { CorrectedAnswer } from "@/components/corrected-answer";
 import { TargetFeedbackPanel } from "@/components/target-feedback";
+import { GrammarConceptSheet } from "@/components/grammar-concept-sheet";
+import type { GrammarConceptId } from "@/lib/grammar-concepts";
 
 export function FeedbackExample({ onBack }: { onBack: () => void }) {
+  const [concept, setConcept] = useState<{
+    id: GrammarConceptId;
+    open: boolean;
+  }>();
   return (
     <div className="page-stack">
       <PageHeader
@@ -58,7 +66,11 @@ export function FeedbackExample({ onBack }: { onBack: () => void }) {
               title="문장별 교정"
               description="실제 답변 복습 화면과 같은 교정 카드입니다. 원문·수정문·이유를 함께 제공합니다."
             >
-              <GrammarCorrections items={example.grammar} />
+              <GrammarCorrections
+                items={example.grammar}
+                transcript={example.transcript}
+                onConcept={(id) => setConcept({ id, open: true })}
+              />
             </PageSection>
             <CorrectedAnswer
               transcript={example.transcript}
@@ -112,6 +124,13 @@ export function FeedbackExample({ onBack }: { onBack: () => void }) {
         </GridItem>
       </Grid>
       <TargetFeedbackPanel target="IH" report={example.targetFeedback} />
+      <GrammarConceptSheet
+        conceptId={concept?.open ? concept.id : null}
+        showMine={false}
+        onOpenChange={(open) => {
+          if (!open) setConcept((c) => (c ? { ...c, open: false } : c));
+        }}
+      />
     </div>
   );
 }

@@ -13,13 +13,16 @@ export async function requireUser() {
   if (!user) throw new HttpError(401, "로그인이 필요합니다.");
   return user;
 }
+// Local runs use 3000; `next dev` moves to 3001 while 3000 is busy.
+const LOCAL_ORIGINS = ["localhost", "127.0.0.1"].flatMap((host) =>
+  ["3000", "3001"].map((port) => `http://${host}:${port}`),
+);
 export function checkOrigin(request: Request) {
   const origin = request.headers.get("origin");
-  const localOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
   const allowedLocal =
     isLocalRuntime() &&
-    localOrigins.includes(origin || "") &&
-    localOrigins.includes(new URL(request.url).origin);
+    LOCAL_ORIGINS.includes(origin || "") &&
+    LOCAL_ORIGINS.includes(new URL(request.url).origin);
   if (origin !== appUrl() && !allowedLocal)
     throw new HttpError(
       403,

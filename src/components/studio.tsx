@@ -23,6 +23,7 @@ import { AppShell } from "./layout/app-shell";
 import { Dashboard } from "./workspace/dashboard";
 import { QuestionLibrary } from "./workspace/question-library";
 import { LearningHistory } from "./workspace/history";
+import { GrammarNotes } from "./workspace/grammar-notes";
 import { TestGuide } from "./workspace/guide";
 import { SettingsPage } from "./workspace/settings";
 import { Setup, defaultConfig } from "./setup";
@@ -115,9 +116,14 @@ export function Studio() {
         }
         const initialView = params.get("view");
         if (
-          ["bank", "history", "guide", "settings", "example"].includes(
-            initialView || "",
-          )
+          [
+            "bank",
+            "history",
+            "grammar",
+            "guide",
+            "settings",
+            "example",
+          ].includes(initialView || "")
         )
           setView(initialView as WorkspaceView);
         let pendingPractice = params.get("practice");
@@ -352,6 +358,14 @@ export function Studio() {
                 onDelete={setPendingDelete}
               />
             )}
+            {view === "grammar" && (
+              <GrammarNotes
+                key={session?.user?.id || "signed-out"}
+                signedIn={Boolean(session?.user)}
+                onConnect={() => setLoginOpen(true)}
+                onOpenRecord={(id) => void loadExam(id)}
+              />
+            )}
             {view === "guide" && (
               <TestGuide onStart={() => void startSetup()} />
             )}
@@ -383,6 +397,7 @@ export function Studio() {
                     ? preparePractice(exam.config.practiceQuestionId)
                     : void startSetup()
                 }
+                onGrammarNotes={() => navigate("grammar")}
               />
             )}
           </>

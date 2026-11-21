@@ -78,6 +78,7 @@ export const FEEDBACK_EXAMPLE = {
         "Last summer라는 끝난 과거의 시점을 이야기하므로 go의 과거형 went를 씁니다.",
       category: "tense",
       kind: "error",
+      concepts: ["past-narration"],
     },
     {
       question: 1,
@@ -87,6 +88,7 @@ export const FEEDBACK_EXAMPLE = {
         "many 뒤에는 셀 수 있는 명사의 복수형이 옵니다. picture를 pictures로 바꿉니다.",
       category: "agreement",
       kind: "error",
+      concepts: ["countable-plural"],
     },
     {
       question: 1,
@@ -96,6 +98,7 @@ export const FEEDBACK_EXAMPLE = {
         "무엇을 하기로 결정했다고 말할 때는 decide 뒤에 to + 동사원형을 씁니다.",
       category: "other",
       kind: "error",
+      concepts: ["verb-patterns"],
     },
     {
       question: 1,
@@ -105,6 +108,7 @@ export const FEEDBACK_EXAMPLE = {
         "그 여행보다 앞선 경험을 돌아보므로 과거완료 had + 과거분사를 씁니다. see의 과거분사는 saw가 아니라 seen입니다.",
       category: "tense",
       kind: "error",
+      concepts: ["perfect-aspect", "irregular-past"],
     },
     {
       question: 1,
@@ -114,6 +118,7 @@ export const FEEDBACK_EXAMPLE = {
         "원문도 올바른 문장입니다. 여행을 즐겼다는 같은 의미를 다른 방식으로 표현한 선택 사항이며, 반드시 바꿀 필요는 없습니다.",
       category: "word-choice",
       kind: "naturalness",
+      concepts: ["other"],
     },
   ] satisfies NonNullable<Evaluation["grammar"]>,
   strengths: [

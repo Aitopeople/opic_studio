@@ -153,7 +153,7 @@ test("single-question target coaching never turns into a grade, and legacy evalu
     false,
   );
 });
-test("each real evaluation request carries its saved target profile and requires structured coaching, without a second model call", async () => {
+test("each real evaluation request carries its saved target profile and requires structured coaching, with grammar audited in a separate call", async () => {
   const exam = fixture();
   saveConnection(
     exam.userId,
@@ -171,7 +171,8 @@ test("each real evaluation request carries its saved target profile and requires
     ),
   );
   const originalFetch = globalThis.fetch;
-  let inferenceCalls = 0;
+  let inferenceCalls = 0,
+    auditCalls = 0;
   globalThis.fetch = async (url, options) => {
     assert.equal(
       new Headers(options?.headers).get("authorization"),
@@ -183,8 +184,19 @@ test("each real evaluation request carries its saved target profile and requires
           { slug: "test-luna", display_name: "Luna", visibility: "list" },
         ],
       });
-    inferenceCalls++;
     const request = JSON.parse(String(options?.body));
+    if (request.text.format.name === "opic_grammar_audit") {
+      auditCalls++;
+      assert.doesNotMatch(request.instructions, /targetProfile/);
+      return new Response(
+        [
+          `data: ${JSON.stringify({ type: "response.output_text.delta", delta: JSON.stringify({ items: [] }) })}\n\n`,
+          `data: ${JSON.stringify({ type: "response.completed", response: { status: "completed" } })}\n\n`,
+        ].join(""),
+        { headers: { "Content-Type": "text/event-stream" } },
+      );
+    }
+    inferenceCalls++;
     const input = JSON.parse(request.input[0].content);
     assert.equal(input.targetProfile.target, "IH");
     assert.deepEqual(
@@ -208,6 +220,7 @@ test("each real evaluation request carries its saved target profile and requires
     assert.equal(checked.targetFeedback?.target, "IH");
     assert.equal(checked.range, "평가 근거 부족");
     assert.equal(inferenceCalls, 1);
+    assert.equal(auditCalls, 1);
   } finally {
     globalThis.fetch = originalFetch;
   }

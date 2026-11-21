@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { correctedTranscript } from "../src/lib/corrected-transcript";
-import { speechChunks } from "../src/lib/speech";
+import { englishVoice, speechChunks } from "../src/lib/speech";
 import { FEEDBACK_EXAMPLE } from "../src/lib/feedback-example";
 import type { Evaluation } from "../src/lib/types";
 
@@ -44,4 +44,48 @@ test("speech chunks preserve an answer's words and order while bounding long utt
   assert.equal(chunks.join(" "), text.trim().replace(/\s+/g, " "));
   assert.ok(chunks.every((chunk) => chunk.length > 0 && chunk.length <= 220));
   assert.deepEqual(speechChunks("  \n  "), []);
+});
+test("interviewer voice is ranked by quality, not by the browser's list order", () => {
+  const v = (name: string, lang = "en-US", voiceURI = name) => ({
+    name,
+    lang,
+    voiceURI,
+  });
+  // A real macOS Chrome list: Samantha (compact) precedes Google US English.
+  const macChrome = [
+    "Albert",
+    "Bad News",
+    "Daniel",
+    "Eddy (영어(미국))",
+    "Fred",
+    "Karen",
+    "Samantha",
+    "Zarvox",
+    "Google US English",
+    "Google UK English Female",
+  ].map((name) =>
+    v(name, name === "Daniel" || name.includes("UK") ? "en-GB" : "en-US"),
+  );
+  assert.equal(englishVoice(macChrome)?.name, "Google US English");
+  const withAva = [
+    ...macChrome,
+    v("Samantha (Enhanced)"),
+    v("Ava (프리미엄)", "en-US", "com.apple.voice.premium.en-US.Ava"),
+  ];
+  assert.equal(englishVoice(withAva)?.name, "Ava (프리미엄)");
+  assert.equal(
+    englishVoice([
+      v("Ava", "en-US", "com.apple.voice.enhanced.en-US.Ava"),
+      ...macChrome,
+    ])?.name,
+    "Ava",
+  );
+  const edge = [
+    v("Microsoft David - English (United States)"),
+    v("Microsoft Aria Online (Natural) - English (United States)"),
+    v("Google US English"),
+  ];
+  assert.equal(englishVoice(edge)?.name, edge[1].name);
+  assert.equal(englishVoice([v("Zarvox"), v("Moira", "en-IE")])?.name, "Moira");
+  assert.equal(englishVoice([v("Yuna", "ko-KR")]), null);
 });
