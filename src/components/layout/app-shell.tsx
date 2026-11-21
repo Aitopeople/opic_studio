@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LogOut,
   Settings2,
+  SpellCheck,
   X,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -55,6 +56,7 @@ const learning = [
   { view: "setup", label: "실전 모의시험", icon: Headphones },
   { view: "bank", label: "문제 라이브러리", icon: BookOpen },
   { view: "history", label: "학습 기록", icon: ChartNoAxesCombined },
+  { view: "grammar", label: "문법 노트", icon: SpellCheck },
 ] as const;
 const resources = [
   { view: "guide", label: "시험 가이드", icon: GraduationCap },

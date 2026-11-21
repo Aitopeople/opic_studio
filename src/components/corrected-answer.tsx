@@ -6,9 +6,11 @@ import type { Evaluation } from "@/lib/types";
 export function CorrectedAnswer({
   transcript,
   items,
+  legacy = false,
 }: {
   transcript: string;
   items: NonNullable<Evaluation["grammar"]>;
+  legacy?: boolean;
 }) {
   const corrected = correctedTranscript(transcript, items);
   if (!transcript.trim()) return null;
@@ -34,6 +36,12 @@ export function CorrectedAnswer({
             ? `${corrected.applied}개 문법 수정만 반영했습니다. 원문의 사실과 이야기 순서를 유지하며, 선택적인 표현 제안은 제외합니다.`
             : "원문을 그대로 읽습니다. 수정할 부분이 있다면 아래 문장별 교정도 확인해 주세요."}
         </p>
+        {legacy && (
+          <p className="text-xs leading-5 text-muted-foreground">
+            이전 기준의 문법 점검 결과라 고치지 못한 오류가 남아 있을 수
+            있습니다. 위의 문법 다시 점검을 받으면 모든 문장을 새로 확인합니다.
+          </p>
+        )}
         {corrected.skipped > 0 && (
           <p className="text-xs leading-5 text-muted-foreground">
             원문에서 위치를 분명하게 특정할 수 없는 수정 {corrected.skipped}개는

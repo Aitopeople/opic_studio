@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  BookOpenCheck,
   Check,
   ChevronRight,
   Download,
@@ -12,6 +13,7 @@ import {
   Pencil,
   ShieldCheck,
   Sparkles,
+  SpellCheck,
 } from "lucide-react";
 import { HStack, VStack, Grid, GridItem } from "./layout/stack";
 import { Button } from "./ui/button";
@@ -27,8 +29,15 @@ import {
   SpeechPlaybackSettings,
   useSpeechPlayback,
 } from "./speech-playback";
+import { GrammarConceptSheet } from "./grammar-concept-sheet";
 import { clock, dateLabel } from "@/lib/utils";
 import { TYPE_LABELS, type PublicExam } from "@/lib/types";
+import {
+  GRAMMAR_AUDIT_VERSION,
+  getGrammarConcept,
+  type GrammarConceptId,
+} from "@/lib/grammar-concepts";
+import { conceptCounts, type GrammarProfile } from "@/lib/grammar-profile";
 
 export function Results({
   initial,
@@ -37,6 +46,7 @@ export function Results({
   onConnect,
   onBack,
   onRetry,
+  onGrammarNotes,
 }: {
   initial: PublicExam;
   aiConfigured: boolean;
@@ -44,6 +54,7 @@ export function Results({
   onConnect: () => void;
   onBack: () => void;
   onRetry: () => void;
+  onGrammarNotes?: () => void;
 }) {
   const [exam, setExam] = useState(initial),
     [selected, setSelected] = useState(initial.answers[0]?.index ?? 0),
@@ -54,6 +65,10 @@ export function Results({
     [error, setError] = useState<string | null>(null);
   const [transcribing, setTranscribing] = useState(false),
     [transcriptionConsent, setTranscriptionConsent] = useState(false);
+  const [checkingGrammar, setCheckingGrammar] = useState(false),
+    [sheet, setSheet] = useState<{ id: GrammarConceptId; open: boolean }>(),
+    [profile, setProfile] = useState<GrammarProfile | null>(null),
+    [profileLoading, setProfileLoading] = useState(false);
   const { stop: stopSpeech } = useSpeechPlayback();
   useEffect(() => {
     stopSpeech();
@@ -62,6 +77,37 @@ export function Results({
     question = exam.questions[selected],
     feedback = exam.evaluation,
     answered = exam.answers.filter((a) => !a.skipped).length;
+  const grammarCurrent = feedback?.grammarVersion === GRAMMAR_AUDIT_VERSION,
+    examPatterns = conceptCounts(feedback?.grammar || []);
+  async function checkGrammar() {
+    setCheckingGrammar(true);
+    setError(null);
+    try {
+      const result = await api<{ exam: PublicExam }>(
+        `/api/exams/${exam.id}/grammar`,
+        { method: "POST" },
+      );
+      setExam(result.exam);
+      setProfile(null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setCheckingGrammar(false);
+    }
+  }
+  async function openConcept(id: GrammarConceptId) {
+    setSheet({ id, open: true });
+    if (profile || profileLoading) return;
+    setProfileLoading(true);
+    try {
+      const data = await api<{ profile: GrammarProfile }>("/api/grammar");
+      setProfile(data.profile);
+    } catch {
+      /* The concept explanation still works without personal examples. */
+    } finally {
+      setProfileLoading(false);
+    }
+  }
   const pendingTranscriptions = exam.answers.filter(
     (a) =>
       a.audio &&
@@ -427,6 +473,78 @@ export function Results({
             ?.scrollIntoView({ block: "start", behavior: "smooth" });
         }}
       />
+      {feedback && !grammarCurrent && (
+        <Card className="px-6 shadow-none" data-grammar-recheck>
+          <HStack gap={5} align="start" wrap>
+            <span className="icon-tile large">
+              <SpellCheck size={22} />
+            </span>
+            <VStack gap={2} className="flex-1">
+              <h2>문법 다시 점검</h2>
+              <p className="text-subtle">
+                이 기록에는 새 기준의 문법 점검 결과가 없어 놓친 오류가 있을 수
+                있어요. 새 점검은 모든 문장을 확인해 오류를 빠짐없이 찾고, 문법
+                개념별로 문법 노트에 모아 줍니다.
+              </p>
+              <span className="caption">
+                코칭 피드백은 그대로 두고 문법만 다시 봅니다. 본인 ChatGPT 구독
+                사용량을 사용하며 버튼을 누를 때만 요청합니다.
+              </span>
+            </VStack>
+            <Button
+              disabled={busy || checkingGrammar || transcribing}
+              onClick={() => (aiConfigured ? void checkGrammar() : onConnect())}
+            >
+              {checkingGrammar ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : (
+                <SpellCheck size={16} />
+              )}
+              {checkingGrammar
+                ? "문법 점검 중…"
+                : aiConfigured
+                  ? "문법 다시 점검"
+                  : "ChatGPT 구독 연결"}
+            </Button>
+          </HStack>
+        </Card>
+      )}
+      {grammarCurrent && examPatterns.length > 0 && (
+        <Card className="px-6 shadow-none" data-exam-grammar-patterns>
+          <VStack gap={4}>
+            <HStack justify="between" align="start" wrap>
+              <VStack gap={1} className="flex-1">
+                <h2>이번 기록의 문법 패턴</h2>
+                <p className="caption">
+                  문법 수정이 나온 개념과 횟수예요. 개념을 누르면 규칙을 익히고
+                  내 문장을 고쳐 쓸 수 있어요.
+                </p>
+              </VStack>
+              {onGrammarNotes && (
+                <Button variant="outline" size="sm" onClick={onGrammarNotes}>
+                  <BookOpenCheck size={15} />
+                  문법 노트
+                </Button>
+              )}
+            </HStack>
+            <div className="flex flex-wrap gap-2">
+              {examPatterns.map(([id, count]) => (
+                <Button
+                  key={id}
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void openConcept(id)}
+                >
+                  {getGrammarConcept(id)?.title}
+                  <span className="tabular-nums text-muted-foreground">
+                    {count}
+                  </span>
+                </Button>
+              ))}
+            </div>
+          </VStack>
+        </Card>
+      )}
       <VStack gap={5}>
         <HStack justify="between">
           <h2 id="answer-review-title" className="scroll-mt-20">
@@ -599,12 +717,15 @@ export function Results({
                     items={(feedback.grammar || []).filter(
                       (item) => item.question === selected + 1,
                     )}
+                    legacy={!grammarCurrent}
                   />
                 )}
                 <GrammarCorrections
                   items={(feedback?.grammar || []).filter(
                     (item) => item.question === selected + 1,
                   )}
+                  transcript={answer?.transcript}
+                  onConcept={(id) => void openConcept(id)}
                 />
                 {feedback?.evidence
                   .filter((e) => e.question === selected + 1)
@@ -662,6 +783,14 @@ export function Results({
           ? "문제 라이브러리로 돌아가기"
           : "학습 기록으로 돌아가기"}
       </Button>
+      <GrammarConceptSheet
+        conceptId={sheet?.open ? sheet.id : null}
+        stat={profile?.concepts.find((c) => c.id === sheet?.id)}
+        loading={profileLoading}
+        onOpenChange={(open) => {
+          if (!open) setSheet((s) => (s ? { ...s, open: false } : s));
+        }}
+      />
     </VStack>
   );
 }

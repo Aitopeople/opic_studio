@@ -1,4 +1,5 @@
 import type { TargetGrade, TargetCriterionId } from "./target-profiles";
+import type { GrammarConceptId } from "./grammar-concepts";
 export type TargetFeedback = {
   version: string;
   target: TargetGrade;
@@ -81,9 +82,15 @@ export type Evaluation = {
     explanation: string;
     category: string;
     kind: "error" | "naturalness";
+    // Absent on items saved before the dedicated grammar audit.
+    concepts?: GrammarConceptId[];
+    transcriptionDoubt?: boolean;
   }[];
+  // Set only when grammar came from the current dedicated audit.
+  grammarVersion?: string;
   disclaimer: string;
 };
+export type GrammarItem = NonNullable<Evaluation["grammar"]>[number];
 export type Exam = {
   id: string;
   userId: string;
