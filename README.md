@@ -4,7 +4,17 @@ Ava와 연습하는 OPIc 웹앱. Next.js · shadcn/ui · Lucide React 기반이�
 
 ## 실행
 
-Node.js **22.18 이상**이 필요합니다. 프로젝트 폴더의 PowerShell에서 실행하세요.
+macOS와 Windows에서 실행할 수 있습니다. Node.js **22.18 이상**이 필요합니다([nodejs.org](https://nodejs.org) LTS 설치, macOS는 Homebrew `brew install node`도 가능). `node -v`로 버전을 확인하세요.
+
+**macOS** — 프로젝트 폴더의 터미널(zsh)에서 실행하세요.
+
+```bash
+npm ci   # 처음 설치할 때
+[ -f .env.local ] || cp .env.example .env.local
+npm run dev
+```
+
+**Windows** — 프로젝트 폴더의 PowerShell에서 실행하세요.
 
 ```powershell
 npm ci   # 처음 설치할 때
@@ -19,6 +29,8 @@ npm run dev
 - API 키는 직접 입력해야 합니다. 설정을 바꿨다면 앱을 재시작하세요.
 - 최적화 실행: `npm run build` 후 `npm start`. 개발 서버와 같은 포트를 동시에 사용하지 마세요.
 - 3000번이 사용 중이면 `npm run dev`는 3001번에서 열리며, 이 주소에서도 앱을 그대로 쓸 수 있습니다. 단, ChatGPT 연결(로그인)은 등록된 3000번 주소에서 진행됩니다.
+- 브라우저는 최신 Chrome·Edge를 권장합니다. macOS에서 처음 녹음할 때 **시스템 설정 → 개인정보 보호 및 보안 → 마이크**에서 사용하는 브라우저를 허용해야 합니다. 허용 후 브라우저를 다시 시작하세요.
+- 질문·교정문 음성은 브라우저가 제공하는 영어 음성 중 가장 자연스러운 것을 고릅니다: Ava 프리미엄/향상 → Edge Natural 음성 → 기타 프리미엄/향상 음성 → Google US English → Samantha 순. macOS에서는 **시스템 설정 → 손쉬운 사용 → 읽기 및 말하기 → 시스템 음성 → 음성 관리**의 영어(미국)에서 **Ava (프리미엄)**을 내려받은 뒤 브라우저를 다시 시작하세요. Chrome이 내려받은 음성을 표시하지 않으면 Google US English가 사용됩니다.
 
 ## 사용법
 
@@ -81,7 +93,7 @@ OPENAI_TRANSCRIBE_MODEL=gpt-transcribe
 
 Git·Docker 제외 규칙을 적용했습니다. **전체 폴더를 ZIP으로 묶으면 제외 규칙이 자동 적용되지 않습니다.** 이미 커밋한 비밀값은 제외 규칙으로 지워지지 않으므로 키 폐기·재발급과 이력 정리가 필요합니다.
 
-```powershell
+```bash
 npm test
 npm run typecheck
 npm run build

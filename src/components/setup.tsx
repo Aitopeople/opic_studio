@@ -18,6 +18,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Card } from "@/components/ui/card";
+import { englishVoice, loadVoices } from "@/lib/speech";
 import { HStack, VStack, Grid, GridItem } from "@/components/layout/stack";
 import { TOPICS } from "@/lib/questions";
 import type { ExamConfig } from "@/lib/types";
@@ -92,7 +93,7 @@ export function Setup({
   function update<K extends keyof ExamConfig>(key: K, value: ExamConfig[K]) {
     setConfig((c) => ({ ...c, [key]: value }));
   }
-  function sample() {
+  async function sample() {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     const speech = new SpeechSynthesisUtterance(
@@ -100,6 +101,8 @@ export function Setup({
     );
     speech.lang = "en-US";
     speech.rate = 0.92;
+    // Same interviewer voice as the exam, so the sound check is representative.
+    speech.voice = englishVoice(await loadVoices());
     speech.onend = () => setSamplePlayed(true);
     window.speechSynthesis.speak(speech);
   }

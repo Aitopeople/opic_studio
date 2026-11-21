@@ -27,7 +27,7 @@ Git과 Docker 모두 환경 설정 파일, 데이터 폴더, 테스트·임시 �
 
 빌드 후 실행하면 최신 브라우저 번들도 확인할 수 있다.
 
-```powershell
+```bash
 npm run build
 npm run security:check
 ```

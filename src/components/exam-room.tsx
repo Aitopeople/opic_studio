@@ -26,6 +26,7 @@ import { Waveform } from "./waveform";
 import { useRecorder } from "@/hooks/use-recorder";
 import { api, answerForm } from "@/lib/api";
 import { clock } from "@/lib/utils";
+import { englishVoice, loadVoices, speechChunks } from "@/lib/speech";
 import { TYPE_LABELS, type PublicExam } from "@/lib/types";
 
 export function ExamRoom({
@@ -65,6 +66,7 @@ export function ExamRoom({
       finalizing.current = true;
       setBusy(true);
       setError(null);
+      playback.current++;
       window.speechSynthesis?.cancel();
       speakingRef.current = false;
       setSpeaking(false);
@@ -127,6 +129,7 @@ export function ExamRoom({
     return () => {
       clearInterval(timer);
       window.removeEventListener("beforeunload", unload);
+      playback.current++;
       window.speechSynthesis?.cancel();
     };
   }, []);
@@ -151,38 +154,45 @@ export function ExamRoom({
         body: JSON.stringify({ action: "play" }),
       });
       setExam(result.exam);
-      const speech = new SpeechSynthesisUtterance(
+      const voice = englishVoice(await loadVoices());
+      // Chrome's network voices stop mid-utterance on long text, so speak sentence-sized chunks.
+      const chunks = speechChunks(
         result.exam.questions[result.exam.index].prompt,
       );
-      speech.lang = "en-US";
-      speech.rate = 0.91;
-      const english = window.speechSynthesis
-        .getVoices()
-        .filter((v) => v.lang.startsWith("en"));
-      speech.voice =
-        english.find((v) =>
-          /Samantha|Jenny|Aria|Google US English/i.test(v.name),
-        ) ||
-        english[0] ||
-        null;
       const token = ++playback.current;
       speakingRef.current = true;
       setSpeaking(true);
-      speech.onend = () => {
-        if (playback.current !== token) return;
-        speakingRef.current = false;
-        setSpeaking(false);
-        setHasHeard(true);
-      };
-      speech.onerror = () => {
-        speakingRef.current = false;
-        setSpeaking(false);
-        setError(
-          "질문 음성을 재생하지 못했습니다. 운영체제의 영어 음성 설치 여부를 확인해 주세요. 청취 횟수는 이미 사용되었습니다.",
-        );
-      };
       window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(speech);
+      const speak = (index: number) => {
+        if (playback.current !== token) return;
+        if (index >= chunks.length) {
+          speakingRef.current = false;
+          setSpeaking(false);
+          setHasHeard(true);
+          return;
+        }
+        const speech = new SpeechSynthesisUtterance(chunks[index]);
+        speech.lang = "en-US";
+        speech.rate = 0.91;
+        speech.voice = voice;
+        speech.onend = () => speak(index + 1);
+        speech.onerror = (event) => {
+          if (
+            playback.current !== token ||
+            event.error === "interrupted" ||
+            event.error === "canceled"
+          )
+            return;
+          playback.current++;
+          speakingRef.current = false;
+          setSpeaking(false);
+          setError(
+            "질문 음성을 재생하지 못했습니다. 운영체제의 영어 음성 설치 여부를 확인해 주세요. 청취 횟수는 이미 사용되었습니다.",
+          );
+        };
+        window.speechSynthesis.speak(speech);
+      };
+      speak(0);
     } catch (e) {
       setError((e as Error).message);
     } finally {
