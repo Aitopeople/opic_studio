@@ -9,6 +9,19 @@ export const FEEDBACK_EXAMPLE = {
     "Last summer, I go to Busan with my friends. We stayed there for three days. On the first day, we visited a beach and took many picture. The weather was very hot, so we decided going to a cafe. I was tired because we walked a lot, but the trip was really fun. The most memorable part was watching the sunset. Before that trip, I have never saw the sea at sunset. We made a lot of memories, and I want to go back there again.",
   summary:
     "여행의 장소와 기간, 활동, 기억에 남는 장면을 순서대로 전달했습니다. 과거 시제와 동사 뒤에 오는 형태를 고치면 의미를 더 분명하게 전달할 수 있습니다.",
+  vocabulary: [
+    {
+      question: 1,
+      quote: "The weather was very hot, so we decided going to a cafe.",
+      phrase: "get out of the heat",
+      meaning: "더위를 피해 시원한 곳으로 가다",
+      reason:
+        "very hot은 날씨를 잘 설명해요. 카페에 가기로 한 이유까지 짚고 싶을 때 쓸 수 있는 표현이에요.",
+      example: "We decided to go to a cafe to get out of the heat.",
+      practice:
+        "왜 카페에 가기로 했는지 여행을 함께한 친구에게 한 문장으로 말해 보세요.",
+    },
+  ] satisfies NonNullable<Evaluation["vocabulary"]>,
   targetFeedback: {
     version: TARGET_PROFILE_VERSION,
     target: "IH",

@@ -134,12 +134,12 @@ export function GrammarConceptSheet({
                         className="space-y-2 rounded-lg border p-4"
                       >
                         <p lang="en" className="grammar-original">
-                          <span className="sr-only">틀린 예: </span>
+                          <span className="sr-only">원래 표현: </span>
                           {example.wrong}
                         </p>
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <p lang="en" className="grammar-corrected">
-                            <span className="sr-only">바른 예: </span>
+                            <span className="sr-only">학습 예문: </span>
                             {example.right}
                           </p>
                           <SpeechListenButton

@@ -116,7 +116,8 @@ export function adjust(exam: Exam, choice: "easier" | "same" | "harder") {
     ...exam.questions.slice(0, 7),
     ...createSecondSession(
       { ...exam.config, difficulty },
-      Math.floor(Math.random() * 100000),
+      Math.floor(Math.random() * 1_000_000),
+      exam.questions.slice(1, 7).map((question) => question.topic),
     ),
   ];
   exam.adjustment = choice;

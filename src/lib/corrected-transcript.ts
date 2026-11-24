@@ -1,4 +1,34 @@
-import type { Evaluation } from "./types";
+import type { Evaluation, GrammarItem } from "./types";
+
+// A quote such as "he go" must not match the middle of "she goes".
+export function excerptStart(text: string, quote: string, from = 0) {
+  if (!quote) return -1;
+  const word = /[\p{L}\p{M}\p{N}]/u;
+  let start = text.indexOf(quote, from);
+  while (start >= 0) {
+    const insideStart = word.test(quote[0]) && word.test(text[start - 1] || "");
+    const insideEnd =
+      word.test(quote[quote.length - 1]) &&
+      word.test(text[start + quote.length] || "");
+    if (!insideStart && !insideEnd) return start;
+    start = text.indexOf(quote, start + 1);
+  }
+  return -1;
+}
+
+export function correctionStart(
+  text: string,
+  { original, originalStart }: Pick<GrammarItem, "original" | "originalStart">,
+) {
+  if (originalStart !== undefined) {
+    return originalStart >= 0 &&
+      excerptStart(text, original, originalStart) === originalStart
+      ? originalStart
+      : -1;
+  }
+  const first = excerptStart(text, original);
+  return first >= 0 && excerptStart(text, original, first + 1) < 0 ? first : -1;
+}
 
 export function correctedTranscript(
   text: string,
@@ -11,8 +41,8 @@ export function correctedTranscript(
       item.original !== item.corrected,
   );
   const candidates = errors.flatMap((item) => {
-    const start = text.indexOf(item.original);
-    if (start < 0 || text.indexOf(item.original, start + 1) >= 0) return [];
+    const start = correctionStart(text, item);
+    if (item.transcriptionDoubt || start < 0) return [];
     return [
       { start, end: start + item.original.length, corrected: item.corrected },
     ];

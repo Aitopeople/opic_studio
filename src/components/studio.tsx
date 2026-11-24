@@ -24,6 +24,7 @@ import { Dashboard } from "./workspace/dashboard";
 import { QuestionLibrary } from "./workspace/question-library";
 import { LearningHistory } from "./workspace/history";
 import { GrammarNotes } from "./workspace/grammar-notes";
+import { VocaPage } from "./workspace/voca";
 import { TestGuide } from "./workspace/guide";
 import { SettingsPage } from "./workspace/settings";
 import { Setup, defaultConfig } from "./setup";
@@ -120,6 +121,7 @@ export function Studio() {
             "bank",
             "history",
             "grammar",
+            "voca",
             "guide",
             "settings",
             "example",
@@ -364,6 +366,12 @@ export function Studio() {
                 signedIn={Boolean(session?.user)}
                 onConnect={() => setLoginOpen(true)}
                 onOpenRecord={(id) => void loadExam(id)}
+              />
+            )}
+            {view === "voca" && (
+              <VocaPage
+                key={session?.user?.id ?? "guest"}
+                userId={session?.user?.id}
               />
             )}
             {view === "guide" && (

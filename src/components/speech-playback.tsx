@@ -60,7 +60,7 @@ export function SpeechPlaybackProvider({
         typeof SpeechSynthesisUtterance === "undefined"
       ) {
         setError(
-          "이 브라우저에서는 교정문 음성 재생을 지원하지 않습니다. 최신 Chrome 또는 Edge에서 시도해 주세요.",
+          "이 브라우저에서는 음성 재생을 지원하지 않습니다. 최신 Chrome 또는 Edge에서 시도해 주세요.",
         );
         return;
       }
@@ -143,10 +143,12 @@ export function SpeechListenButton({
   text,
   label = "교정문 듣기",
   playbackId,
+  iconOnly = false,
 }: {
   text: string;
   label?: string;
   playbackId?: string;
+  iconOnly?: boolean;
 }) {
   const generatedId = useId(),
     { activeId, start, stop } = useSpeechPlayback();
@@ -156,15 +158,21 @@ export function SpeechListenButton({
   return (
     <Button
       type="button"
-      variant={active ? "secondary" : "outline"}
-      size="sm"
+      variant={active ? "secondary" : iconOnly ? "ghost" : "outline"}
+      size={iconOnly ? "icon" : "sm"}
+      className={
+        iconOnly
+          ? "shrink-0 rounded-full text-teal-800 hover:bg-teal-50"
+          : undefined
+      }
+      title={iconOnly ? (active ? "재생 정지" : label) : undefined}
       aria-label={active ? `${label} 정지` : label}
       aria-pressed={active}
       disabled={!text.trim()}
       onClick={() => (active ? stop(id) : start(id, text))}
     >
       {active ? <Square /> : <Volume2 />}
-      {active ? "정지" : label}
+      {!iconOnly && (active ? "정지" : label)}
     </Button>
   );
 }

@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import {
   BookOpen,
+  BookA,
   ChartNoAxesCombined,
   ChevronsUpDown,
   Fingerprint,
@@ -57,6 +58,7 @@ const learning = [
   { view: "bank", label: "문제 라이브러리", icon: BookOpen },
   { view: "history", label: "학습 기록", icon: ChartNoAxesCombined },
   { view: "grammar", label: "문법 노트", icon: SpellCheck },
+  { view: "voca", label: "VOCA 단어장", icon: BookA },
 ] as const;
 const resources = [
   { view: "guide", label: "시험 가이드", icon: GraduationCap },

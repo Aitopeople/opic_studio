@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { PageHeader, PageSection } from "@/components/layout/page";
 import { Grid, GridItem } from "@/components/layout/stack";
 import { GrammarCorrections } from "@/components/grammar-corrections";
+import { VocabularySuggestions } from "@/components/vocabulary-suggestions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,7 @@ export function FeedbackExample({ onBack }: { onBack: () => void }) {
                 onConcept={(id) => setConcept({ id, open: true })}
               />
             </PageSection>
+            <VocabularySuggestions items={example.vocabulary} />
             <CorrectedAnswer
               transcript={example.transcript}
               items={example.grammar}

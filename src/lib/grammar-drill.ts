@@ -1,3 +1,5 @@
+import { excerptStart } from "./corrected-transcript";
+
 const CONTRACTIONS: [RegExp, string][] = [
   [/\bcan't\b/g, "can not"],
   [/\bcannot\b/g, "can not"],
@@ -14,7 +16,7 @@ export function normalizeSentence(text: string) {
   for (const [pattern, replacement] of CONTRACTIONS)
     value = value.replace(pattern, replacement);
   return value
-    .replace(/[^a-z0-9' ]+/g, " ")
+    .replace(/[^\p{L}\p{M}\p{N}' ]+/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -24,7 +26,7 @@ export function sameSentence(answer: string, expected: string) {
 }
 // Splits a sentence around the first occurrence of a span for highlighting.
 export function splitAround(sentence: string, span: string) {
-  const start = span ? sentence.indexOf(span) : -1;
+  const start = excerptStart(sentence, span);
   if (start < 0) return { before: sentence, match: "", after: "" };
   return {
     before: sentence.slice(0, start),
@@ -35,7 +37,7 @@ export function splitAround(sentence: string, span: string) {
 // Marks every span once, in sentence order, skipping missing or overlapping ones.
 export function markSpans(sentence: string, spans: string[]) {
   const ranges = spans
-    .map((span) => ({ start: span ? sentence.indexOf(span) : -1, span }))
+    .map((span) => ({ start: excerptStart(sentence, span), span }))
     .filter((range) => range.start >= 0)
     .sort((a, b) => a.start - b.start)
     .filter(

@@ -2,7 +2,7 @@ import type { QuestionType } from "./types";
 
 // App-authored grammar notes for Korean OPIc learners. The model only tags
 // each correction with one of these IDs, so explanations stay consistent and free.
-export const GRAMMAR_AUDIT_VERSION = "grammar-audit-v1";
+export const GRAMMAR_AUDIT_VERSION = "grammar-audit-v3";
 export const GRAMMAR_CONCEPT_IDS = [
   "past-narration",
   "irregular-past",
@@ -10,6 +10,7 @@ export const GRAMMAR_CONCEPT_IDS = [
   "perfect-aspect",
   "future-forms",
   "subject-verb-agreement",
+  "do-support",
   "articles",
   "countable-plural",
   "prepositions",
@@ -55,12 +56,12 @@ export const GRAMMAR_CONCEPTS: GrammarConcept[] = [
     id: "past-narration",
     title: "과거 경험은 과거형으로",
     category: "tense",
-    rule: "이미 끝난 일을 이야기할 때는 처음부터 끝까지 과거형으로 맞춥니다.",
+    rule: "끝난 일을 과거형으로 서술할 때는 같은 시점의 사건을 과거형으로 이어 갑니다.",
     points: [
       "Last weekend, When I was a kid처럼 과거 시점을 열었다면 이어지는 동사도 과거형으로 씁니다.",
-      "한국어는 현재형으로도 지난 일을 말할 수 있지만, 영어는 동사 형태로 시점을 드러냅니다.",
+      "영어에서도 장면을 생생하게 들려주려고 현재형으로 이야기를 이어 갈 수 있습니다.",
       "그때 누가 한 말도 과거로 옮깁니다. My friend says → My friend said",
-      "지금도 사실인 내용만 현재형으로 남깁니다. I still play it these days.",
+      "직접 인용은 당시 한 말의 시제를 살립니다. 지금도 사실인 내용은 현재형으로 말할 수 있습니다.",
     ],
     examples: [
       {
@@ -77,7 +78,7 @@ export const GRAMMAR_CONCEPTS: GrammarConcept[] = [
     opportunities: ["past", "comparison"],
     tip: "과거 경험 답변을 마친 뒤 동사만 골라 과거형인지 확인하는 습관을 들이세요.",
     modelHint:
-      "Completed past events told in present forms; tense drifting back to present inside a past story, including reported speech (says → said).",
+      "Unintended shifts in a past narrative. Respect direct quotes, current facts and sustained narrative present.",
   },
   {
     id: "irregular-past",
@@ -103,7 +104,7 @@ export const GRAMMAR_CONCEPTS: GrammarConcept[] = [
     opportunities: ["past", "comparison"],
     tip: "자주 쓰는 불규칙 동사 10개를 골라 I went, I saw처럼 주어와 함께 소리 내어 익히세요.",
     modelHint:
-      "Malformed irregular past or past participle forms (winned, buyed, have saw). Use past-narration instead when the verb is simply left in present tense.",
+      "Malformed irregular past or past participle forms (winned, buyed, have saw). Use do-support when the auxiliary already carries the tense.",
   },
   {
     id: "present-habit",
@@ -130,7 +131,7 @@ export const GRAMMAR_CONCEPTS: GrammarConcept[] = [
     opportunities: ["description", "routine"],
     tip: "일상·습관 문항은 빈도 표현(usually, on weekends)을 먼저 말하고 현재 단순형으로 이어 가세요.",
     modelHint:
-      "Simple present for habits, routines and current facts (not progressive or past).",
+      "Simple present for habitual actions. Allow progressive forms for temporary routines or changing situations.",
   },
   {
     id: "perfect-aspect",
@@ -211,6 +212,32 @@ export const GRAMMAR_CONCEPTS: GrammarConcept[] = [
     tip: "가족·친구를 묘사할 때 주어 뒤 첫 동사의 -s를 의식하며 천천히 말해 보세요.",
     modelHint:
       "Subject-verb agreement in present forms (third-person -s, there is/are, has/have, doesn't/don't).",
+  },
+  {
+    id: "do-support",
+    title: "do·does·did 다음에는 동사원형",
+    category: "other",
+    rule: "부정문과 의문문에서는 do·does·did가 시제와 수를 나타내므로 뒤의 일반동사는 원형으로 씁니다.",
+    points: [
+      "She plays가 부정문이 되면 She doesn't play가 됩니다.",
+      "과거에 산 일을 물을 때는 Did you buy it?처럼 did에 과거를 표시합니다.",
+    ],
+    examples: [
+      {
+        wrong: "She doesn't works on Fridays.",
+        right: "She doesn't work on Fridays.",
+        note: "does에 이미 3인칭 단수가 표시되어 있습니다.",
+      },
+      {
+        wrong: "Did you called him?",
+        right: "Did you call him?",
+        note: "did 뒤에는 call의 원형이 옵니다.",
+      },
+    ],
+    opportunities: "all",
+    tip: "부정문이나 질문에서 do·does·did를 썼다면 바로 뒤 일반동사를 원형으로 말해 보세요.",
+    modelHint:
+      "Base verb after auxiliary do/does/did in negatives and questions, including contractions. This is the primary concept when the auxiliary is correct but the following verb is inflected.",
   },
   {
     id: "articles",
@@ -326,7 +353,7 @@ export const GRAMMAR_CONCEPTS: GrammarConcept[] = [
     rule: "make, help, let, keep은 '누구를/무엇을' 다음에 상태나 동작을 붙입니다.",
     points: [
       "make + 목적어 + 형용사: It makes me happy. 목적어를 빠뜨리지 않습니다.",
-      "help + 사람 + 동사원형: It helps me relax.",
+      "help 뒤에서는 It helps me relax와 It helps me to relax가 모두 가능합니다.",
       "make와 let 뒤의 동작에는 to를 붙이지 않습니다. My mom made me clean my room.",
     ],
     examples: [
@@ -344,7 +371,7 @@ export const GRAMMAR_CONCEPTS: GrammarConcept[] = [
     opportunities: "all",
     tip: "의견 문항에서 It makes me ~, It helps me ~ 문장을 이유로 활용하면 정확하고 자연스럽습니다.",
     modelHint:
-      "make/let/help/keep/find + object + adjective or bare infinitive (missing object, extra to).",
+      "Object complements: make/let me go, help me (to) relax, keep me waiting, find it difficult. Check each verb's own pattern.",
   },
   {
     id: "adjective-forms",
@@ -363,9 +390,9 @@ export const GRAMMAR_CONCEPTS: GrammarConcept[] = [
         note: "설렘을 느낀 사람은 excited입니다.",
       },
       {
-        wrong: "The festival was very funny, so I want to go again.",
-        right: "The festival was a lot of fun, so I want to go again.",
-        note: "즐거웠다는 뜻이면 fun을 씁니다.",
+        wrong: "I felt very exciting when the festival started.",
+        right: "I felt very excited when the festival started.",
+        note: "축제가 시작돼 내가 설렜다는 뜻에는 excited가 맞습니다. 축제가 웃겼다는 뜻으로 쓰는 funny도 자연스럽습니다.",
       },
     ],
     opportunities: "all",
@@ -379,7 +406,7 @@ export const GRAMMAR_CONCEPTS: GrammarConcept[] = [
     category: "other",
     rule: "비교급(better, more convenient)은 비교 대상이 있을 때 쓰고, 셋 이상 중 최고는 the + 최상급으로 말합니다.",
     points: [
-      "비교 대상 없이 better만 쓰면 '무엇보다?'라는 질문이 남습니다.",
+      "I'm feeling better처럼 문맥에서 비교 대상이 분명하면 than 뒤의 내용을 생략할 수 있습니다.",
       "more와 -er을 겹쳐 쓰지 않습니다. more easier가 아니라 easier.",
       "과거와 현재를 비교할 때 than before, than when I was young을 활용합니다.",
     ],
@@ -398,13 +425,13 @@ export const GRAMMAR_CONCEPTS: GrammarConcept[] = [
     opportunities: ["comparison", "opinion", "description"],
     tip: "비교·변화 문항에서는 than before를 붙여 지금과 예전의 차이를 한 문장으로 정리하세요.",
     modelHint:
-      "Comparatives and superlatives (double comparatives, irregular forms, a comparative with no comparison target).",
+      "Comparatives and superlatives (double comparatives and irregular forms). An implicit comparison is valid.",
   },
   {
     id: "sentence-structure",
     title: "문장의 뼈대: 주어·동사",
     category: "word-order",
-    rule: "영어 문장에는 주어와 동사가 필요하고, be동사와 일반동사를 함께 쓰지 않습니다.",
+    rule: "평서문에서 주어와 동사가 맞게 연결되는지 확인합니다. 진행형(be + -ing)과 수동태(be + 과거분사)에는 be가 필요합니다.",
     points: [
       "주어를 생략하지 않습니다. Is very fun이 아니라 It is very fun.",
       "I am agree, I'm very like it처럼 be동사와 일반동사를 겹치지 않습니다.",
@@ -425,7 +452,7 @@ export const GRAMMAR_CONCEPTS: GrammarConcept[] = [
     opportunities: "all",
     tip: "긴 문장이 꼬일 때는 '누가 + 무엇을 했다' 두 단어부터 먼저 말하고 살을 붙이세요.",
     modelHint:
-      "Clause skeleton errors: missing subject, verb or object; be + main verb; a verb used where a noun or adjective is needed.",
+      "Clause skeleton errors: a missing required subject, verb or object, or an extra be before a finite verb (I am agree). Allow spoken ellipsis.",
   },
   {
     id: "pronoun-reference",
@@ -504,7 +531,7 @@ export const GRAMMAR_CONCEPTS: GrammarConcept[] = [
       },
     ],
     opportunities: "all",
-    tip: "So, Because, But 중 하나로 문장을 시작했다면 그 문장 안에서는 다른 접속사를 쓰지 않도록 연습하세요.",
+    tip: "같은 이유와 결과를 두 번 연결했는지 확인하세요. But we stayed home because it rained처럼 서로 다른 관계에는 접속사를 함께 쓸 수 있습니다.",
     modelHint:
       "Conjunction and clause linking errors (because…so, although…but, run-ons that obscure meaning).",
   },
@@ -520,9 +547,9 @@ export const GRAMMAR_CONCEPTS: GrammarConcept[] = [
     ],
     examples: [
       {
-        wrong: "I want to reduce my weight.",
-        right: "I want to lose weight.",
-        note: "체중 감량은 lose weight로 말합니다.",
+        wrong: "I did a decision to walk to work.",
+        right: "I made a decision to walk to work.",
+        note: "결정을 내린다는 뜻에는 make a decision을 씁니다.",
       },
       {
         wrong: "I ate medicine for my cold.",
@@ -533,7 +560,7 @@ export const GRAMMAR_CONCEPTS: GrammarConcept[] = [
     opportunities: "all",
     tip: "자주 말하는 주제(운동, 여행, 음식)의 동사 + 명사 짝을 5개씩 모아 두세요.",
     modelHint:
-      "Collocations and Korean-literal phrasing (reduce weight, eat medicine, do stress).",
+      "Collocations and Korean-literal phrasing (do a decision, eat medicine).",
   },
   {
     id: "word-meaning",

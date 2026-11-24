@@ -22,6 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "./ui/card";
 import { api } from "@/lib/api";
 import { GrammarCorrections } from "./grammar-corrections";
+import { VocabularySuggestions } from "./vocabulary-suggestions";
 import { CorrectedAnswer } from "./corrected-answer";
 import { TargetFeedbackPanel } from "./target-feedback";
 import {
@@ -483,8 +484,8 @@ export function Results({
               <h2>문법 다시 점검</h2>
               <p className="text-subtle">
                 이 기록에는 새 기준의 문법 점검 결과가 없어 놓친 오류가 있을 수
-                있어요. 새 점검은 모든 문장을 확인해 오류를 빠짐없이 찾고, 문법
-                개념별로 문법 노트에 모아 줍니다.
+                있어요. 다시 점검하면 문장별 문법과 어휘를 확인하고 발견한
+                오류를 문법 노트에 모아 줍니다.
               </p>
               <span className="caption">
                 코칭 피드백은 그대로 두고 문법만 다시 봅니다. 본인 ChatGPT 구독
@@ -727,6 +728,13 @@ export function Results({
                   transcript={answer?.transcript}
                   onConcept={(id) => void openConcept(id)}
                 />
+                {!editing && answer && !answer.skipped && (
+                  <VocabularySuggestions
+                    items={(feedback?.vocabulary ?? []).filter(
+                      (item) => item.question === selected + 1,
+                    )}
+                  />
+                )}
                 {feedback?.evidence
                   .filter((e) => e.question === selected + 1)
                   .map((e, i) => (

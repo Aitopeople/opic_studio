@@ -44,8 +44,9 @@ export function CorrectedAnswer({
         )}
         {corrected.skipped > 0 && (
           <p className="text-xs leading-5 text-muted-foreground">
-            원문에서 위치를 분명하게 특정할 수 없는 수정 {corrected.skipped}개는
-            반영하지 않았습니다. 해당 문장은 문장별 교정에서 들을 수 있습니다.
+            위치가 겹치거나 불분명한 교정, 또는 녹음 확인이 필요한 교정{" "}
+            {corrected.skipped}개는 아래 카드에서 개별 제안으로 확인할 수
+            있습니다.
           </p>
         )}
       </CardContent>

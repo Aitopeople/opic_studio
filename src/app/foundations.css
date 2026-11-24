@@ -95,6 +95,18 @@
   --panel-padding: 24px;
 }
 @layer base {
+  html,
+  .review-questions,
+  [data-slot="sheet-content"].overflow-y-auto,
+  [data-slot="sidebar"]:not([data-collapsible="icon"]) [data-slot="sidebar-content"] {
+    scrollbar-gutter: stable;
+  }
+  @supports (scrollbar-gutter: stable) {
+    /* The viewport keeps its gutter while Radix locks background scrolling. */
+    body[data-scroll-locked] {
+      margin-right: 0 !important;
+    }
+  }
   * {
     @apply border-border outline-ring/50;
   }

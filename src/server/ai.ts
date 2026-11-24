@@ -1,5 +1,7 @@
 import { z } from "zod";
 import type { Exam, Evaluation } from "@/lib/types";
+import { excerptStart } from "@/lib/corrected-transcript";
+import { normalizeSentence } from "@/lib/grammar-drill";
 import {
   GRAMMAR_AUDIT_VERSION,
   GRAMMAR_CONCEPT_IDS,
@@ -17,8 +19,20 @@ const dimension = z.object({
   score: z.number().int().min(1).max(5),
   feedback: z.string(),
 });
+const vocabularyItemSchema = z.object({
+  question: z.number().int().min(1).max(15),
+  quote: z.string().trim().min(1),
+  phrase: z.string().trim().min(1),
+  meaning: z.string().trim().min(1),
+  reason: z.string().trim().min(1),
+  example: z.string().trim().min(1),
+  practice: z.string().trim().min(1),
+});
+const vocabularySchema = z.array(vocabularyItemSchema).max(30);
+
 export const evaluationSchema = z.object({
   targetFeedback: targetFeedbackSchema.optional(),
+  vocabulary: vocabularySchema.optional(),
   range: z.enum([
     "NL–NM",
     "NM–NH",
@@ -51,6 +65,7 @@ export const evaluationSchema = z.object({
       z.object({
         question: z.number().int().min(1).max(15),
         original: z.string().min(1),
+        originalStart: z.number().int().nonnegative().optional(),
         corrected: z.string().min(1),
         explanation: z.string(),
         category: z.enum([
@@ -75,7 +90,17 @@ export const evaluationSchema = z.object({
 // Grammar comes from a separate audit. New model output must include target coaching.
 const gradingOutputSchema = evaluationSchema
   .omit({ grammar: true, grammarVersion: true })
-  .extend({ targetFeedback: targetFeedbackSchema });
+  .extend({
+    targetFeedback: targetFeedbackSchema,
+    vocabulary: z
+      .array(
+        vocabularyItemSchema.omit({ example: true }).extend({
+          beforePhrase: z.string(),
+          afterPhrase: z.string(),
+        }),
+      )
+      .max(30),
+  });
 
 const gradingPrompt = `You are an English speaking practice coach for Korean OPIc learners. Assess the WHOLE speech transcript against the four ACTFL dimensions: Global Tasks/Functions, Context/Content, Accuracy/Comprehensibility, and Text Type. This is an unofficial, unvalidated learning estimate, not an ACTFL certified rating. Write feedback in Korean; quoted learner excerpts and improved English stay in English.
 
@@ -95,6 +120,9 @@ const gradingPrompt = `You are an English speaking practice coach for Korean OPI
 - priorities: one to three of the most useful improvements, distinct from each other. Do not repeat the summary or dimension wording.
 - evidence: up to five content, organization or task observations, each with a verbatim quote and an improved version that keeps the learner's facts. A separate grammar audit already lists every word-level grammar fix, so do not spend evidence items on pure grammar corrections; the improved sentence itself must still be correct English.
 - studyPlan: concrete drills that say what to do and how. Do not restate priorities.
+- vocabulary: read each non-skipped answer for places where the speaker talks around a specific idea using generic words. When there is a clear opportunity, give the most useful one or two everyday spoken expressions for that answer. Grammatical wording can still be too general for the situation: when a faulty product is being returned, "send me a new one" expresses a request for a replacement. Similarly, "pay a little money every month to use it" could become "pay a monthly fee". Pick the expression that adds precision in context. Return no item for already precise, idiomatic speech. A wrong word that changes the meaning (e.g. borrow vs lend), grammar repairs, and transcript guesses belong in the grammar audit. Never use vocabulary suggestions to determine a rating.
+- For each vocabulary item, quote an exact English excerpt from that answer. Compose a complete English example using three consecutive pieces: beforePhrase, phrase, afterPhrase. They form ONE sentence when joined. Put the reusable expression as actually spoken in the middle field, including its inflection and any intervening object. Keep the original facts, participants and intent. Give a short Korean meaning and a Korean reason explaining what this phrase conveys here. Keep valid original wording optional. End with a short Korean prompt asking the learner to say that idea aloud again, without giving away the English answer. Do not recycle a correction as a vocabulary item.
+- Check each answer independently, including sentences with a grammar error elsewhere. For example, the verb after "without" may need a grammar correction while the separate phrase "a new one" in that same sentence can teach "a replacement". Quote the generic wording that motivates the vocabulary suggestion.
 - Do not repeat the same advice across summary, priorities, evidence, studyPlan and targetFeedback. Each field adds something new.
 - Accuracy/Comprehensibility may note when slang, jargon or Korean-literal wording would confuse a general listener who does not share the learner's hobby.`;
 
@@ -134,7 +162,19 @@ async function grade(exam: Exam) {
       },
     },
   });
-  return gradingOutputSchema.parse(JSON.parse(text));
+  const grading = gradingOutputSchema.parse(JSON.parse(text));
+  return {
+    ...grading,
+    vocabulary: grading.vocabulary.map(
+      ({ beforePhrase, afterPhrase, ...item }) => ({
+        ...item,
+        example: [beforePhrase.trim(), item.phrase, afterPhrase.trim()]
+          .filter(Boolean)
+          .join(" ")
+          .replace(/ +([,.!?;:])/g, "$1"),
+      }),
+    ),
+  };
 }
 
 // Coaching and the grammar audit run side by side, so the wait stays the same.
@@ -180,6 +220,35 @@ export function validateEvaluationEvidence(
         ""
       ).includes(item.original),
   );
+  if (evaluation.vocabulary) {
+    const phrases = new Map<number, Set<string>>();
+    evaluation.vocabulary = evaluation.vocabulary.filter((item) => {
+      const answer = exam.answers.find((a) => a.index === item.question - 1);
+      const phrase = normalizeSentence(item.phrase);
+      if (
+        !exam.questions[item.question - 1] ||
+        !answer ||
+        answer.skipped ||
+        !phrase ||
+        excerptStart(answer.transcript, item.quote) < 0 ||
+        excerptStart(normalizeSentence(item.example), phrase) < 0 ||
+        excerptStart(normalizeSentence(item.quote), phrase) >= 0
+      )
+        return false;
+      const repeatsCorrection = evaluation.grammar.some(
+        (fix) =>
+          fix.question === item.question &&
+          (item.quote.includes(fix.original) ||
+            fix.original.includes(item.quote)) &&
+          excerptStart(normalizeSentence(fix.corrected), phrase) >= 0,
+      );
+      const seen = phrases.get(item.question) ?? new Set<string>();
+      if (repeatsCorrection || seen.has(phrase) || seen.size >= 2) return false;
+      seen.add(phrase);
+      phrases.set(item.question, seen);
+      return true;
+    });
+  }
   const rated = exam.answers.filter(
     (a) =>
       exam.questions[a.index]?.type !== "intro" &&

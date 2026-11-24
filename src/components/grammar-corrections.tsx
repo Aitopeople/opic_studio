@@ -95,13 +95,11 @@ export function GrammarCorrections({
             <SpeakableText
               heading={
                 <span className="field-label">
-                  {context
-                    ? item.kind === "error"
+                  {item.kind === "naturalness"
+                    ? "이렇게도 말할 수 있어요"
+                    : context
                       ? "고친 문장"
-                      : "이렇게도 말할 수 있어요"
-                    : item.kind === "error"
-                      ? "최소한으로 고치면"
-                      : "이렇게도 말할 수 있어요"}
+                      : "고친 표현"}
                 </span>
               }
               text={context ? context.correctedSentence : item.corrected}

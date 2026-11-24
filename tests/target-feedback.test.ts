@@ -153,6 +153,53 @@ test("single-question target coaching never turns into a grade, and legacy evalu
     false,
   );
 });
+test("vocabulary cards require grounded quotes, usable examples, and at most two distinct expressions per answer", () => {
+  const exam = fixture();
+  const quote = "Could you send me a new one without charge me again?";
+  exam.answers[0].transcript = quote;
+  exam.questions.push({ ...exam.questions[0] });
+  exam.answers.push({ ...exam.answers[0], index: 1, skipped: true });
+  const card = {
+    ...FEEDBACK_EXAMPLE.vocabulary[0],
+    quote,
+    phrase: "a replacement",
+    example: "Could you send me a replacement at no extra charge?",
+  };
+  const second = { ...card, phrase: "at no extra charge" };
+  const raw = evaluationSchema.parse({
+    ...output(),
+    vocabulary: [
+      { ...card, question: 2 },
+      { ...card, quote: "invented quote" },
+      { ...card, phrase: "send me" },
+      { ...card, phrase: "free of charge" },
+      {
+        ...card,
+        phrase: "without charging",
+        example: "Could you send me a new one without charging me again?",
+      },
+      card,
+      card,
+      second,
+      { ...card, phrase: "send me a replacement" },
+    ],
+    grammar: [
+      {
+        question: 1,
+        original: "without charge",
+        corrected: "without charging",
+        category: "other",
+        kind: "error",
+        explanation: "동명사",
+      },
+    ],
+  });
+  assert.deepEqual(validateEvaluationEvidence(exam, raw).vocabulary, [
+    card,
+    second,
+  ]);
+});
+
 test("each real evaluation request carries its saved target profile and requires structured coaching, with grammar audited in a separate call", async () => {
   const exam = fixture();
   saveConnection(
@@ -188,9 +235,16 @@ test("each real evaluation request carries its saved target profile and requires
     if (request.text.format.name === "opic_grammar_audit") {
       auditCalls++;
       assert.doesNotMatch(request.instructions, /targetProfile/);
+      const reviews = JSON.parse(
+        request.input[0].content,
+      ).responses[0].sentences.map((_: string, index: number) => ({
+        question: 1,
+        sentence: index + 1,
+        items: [],
+      }));
       return new Response(
         [
-          `data: ${JSON.stringify({ type: "response.output_text.delta", delta: JSON.stringify({ items: [] }) })}\n\n`,
+          `data: ${JSON.stringify({ type: "response.output_text.delta", delta: JSON.stringify({ reviews }) })}\n\n`,
           `data: ${JSON.stringify({ type: "response.completed", response: { status: "completed" } })}\n\n`,
         ].join(""),
         { headers: { "Content-Type": "text/event-stream" } },
@@ -205,8 +259,18 @@ test("each real evaluation request carries its saved target profile and requires
     );
     assert.equal(input.responses[0].answer, FEEDBACK_EXAMPLE.transcript);
     assert.ok(request.text.format.schema.required.includes("targetFeedback"));
+    assert.ok(request.text.format.schema.required.includes("vocabulary"));
     assert.match(request.instructions, /NEVER the current range estimate/);
-    const payload = JSON.stringify(output(FEEDBACK_EXAMPLE.targetFeedback));
+    const payload = JSON.stringify({
+      ...output(FEEDBACK_EXAMPLE.targetFeedback),
+      vocabulary: [
+        {
+          ...FEEDBACK_EXAMPLE.vocabulary[0],
+          beforePhrase: "We decided to go to a cafe to",
+          afterPhrase: ".",
+        },
+      ],
+    });
     return new Response(
       [
         `data: ${JSON.stringify({ type: "response.output_text.delta", delta: payload })}\n\n`,
@@ -218,6 +282,7 @@ test("each real evaluation request carries its saved target profile and requires
   try {
     const checked = await evaluate(exam);
     assert.equal(checked.targetFeedback?.target, "IH");
+    assert.deepEqual(checked.vocabulary, FEEDBACK_EXAMPLE.vocabulary);
     assert.equal(checked.range, "평가 근거 부족");
     assert.equal(inferenceCalls, 1);
     assert.equal(auditCalls, 1);

@@ -5,6 +5,8 @@
 import { db } from "../src/server/db";
 import { newExam } from "../src/server/exam";
 import { auditGrammar } from "../src/server/grammar";
+import { correctedTranscript } from "../src/lib/corrected-transcript";
+import { sentenceContext } from "../src/lib/grammar-profile";
 import type { Question, QuestionType } from "../src/lib/types";
 
 type Fixture = {
@@ -12,8 +14,8 @@ type Fixture = {
   topicLabel: string;
   prompt: string;
   transcript: string;
-  // Each anchor marks one seeded error; any reported span that overlaps it counts.
-  expected: string[];
+  // An anchor identifies the issue. The pattern checks the applied correction.
+  expected: [string, RegExp][];
   // Correct wording that must never be reported as an error.
   untouched: string[];
 };
@@ -25,19 +27,16 @@ const FIXTURES: Fixture[] = [
     prompt:
       "Tell me about a memorable trip. What happened, and why was it special?",
     transcript:
-      "Okay, good question. My most exciting trip is when I go to Busan last summer with my two friend. At first, the weather is really bad, and my friend say we should go home. But we stay one more day, and finally we see a beautiful sunset. It was so funny and I get a lot of energy. Thank you.",
+      "Okay, good question. Last summer I go to Busan with my two friend. At first, the weather is really bad, and my friend say we should go home. But we stay one more day, and finally we see a beautiful sunset. Our guide told a joke. It was so funny. We laughed all the way home. Thank you.",
     expected: [
-      "is when",
-      "I go to Busan",
-      "two friend",
-      "the weather is",
-      "my friend say",
-      "we stay one more day",
-      "we see a beautiful sunset",
-      "so funny",
-      "I get a lot of energy",
+      ["I go to Busan", /I (?:went|trave[l]+ed) to Busan/i],
+      ["two friend", /two friends/i],
+      ["the weather is", /the weather was/i],
+      ["my friend say", /my friend (?:said|told)/i],
+      ["we stay one more day", /we stayed/i],
+      ["we see a beautiful sunset", /we saw a beautiful sunset/i],
     ],
-    untouched: ["Okay, good question.", "Thank you."],
+    untouched: ["Okay, good question.", "It was so funny.", "Thank you."],
   },
   {
     type: "opinion",
@@ -47,10 +46,16 @@ const FIXTURES: Fixture[] = [
     transcript:
       "I think reading books make me smart. Because it give many informations. For example, I read a novel every week, and it helps me relax. So I think it makes valuable.",
     expected: [
-      "reading books make",
-      "it give",
-      "many informations",
-      "it makes valuable",
+      ["reading books make", /reading books makes|reading makes/i],
+      ["it give", /it (?:gives|provides)/i],
+      [
+        "many informations",
+        /(?:a lot of|lots of|plenty of|much|useful) information\b/i,
+      ],
+      [
+        "it makes valuable",
+        /(?:reading|it)(?: is|'s) valuable|makes (?:reading|it) valuable/i,
+      ],
     ],
     untouched: ["I read a novel every week", "it helps me relax"],
   },
@@ -62,11 +67,49 @@ const FIXTURES: Fixture[] = [
     transcript:
       "Hi, I want to buy a ticket for the concert. What time the concert starts? And can you tell me where is the parking lot? Also, how much is the ticket for student?",
     expected: [
-      "What time the concert starts",
-      "where is the parking lot",
-      "for student",
+      [
+        "What time the concert starts",
+        /what time does the concert (?:start|begin)/i,
+      ],
+      ["where is the parking lot", /where (?:the parking lot is|I can park)/i],
+      ["for student", /for (?:a student|students)|student ticket/i],
     ],
     untouched: ["I want to buy a ticket for the concert."],
+  },
+  {
+    type: "past",
+    topicLabel: "영화",
+    prompt: "Tell me about the last time you saw a movie.",
+    transcript:
+      "Last night my sister give me two ticket for a movie. I felt boring while we waited in line with nothing to do. I didn't bought popcorn. My sister borrowed me her scarf because I was cold. I explained her the ending. Now I look forward to see the sequel.",
+    expected: [
+      ["my sister give", /my sister gave/i],
+      ["two ticket", /two tickets/i],
+      ["I felt boring", /I (?:felt|was|got) bored/i],
+      ["didn't bought", /did(?:n't| not) buy/i],
+      [
+        "borrowed me her scarf",
+        /(?:lent|loaned) me her scarf|I borrowed (?:my sister's|her) scarf/i,
+      ],
+      ["explained her the ending", /explained the ending to her/i],
+      ["look forward to see", /look(?:ing)? forward to seeing/i],
+    ],
+    untouched: ["because I was cold"],
+  },
+  {
+    type: "past",
+    topicLabel: "일상",
+    prompt: "Tell me about something that made your week better.",
+    transcript:
+      "Yesterday my friend said, “I'm taking the bus this week.” It helps her to relax. I'm feeling better, too. We still walk home together on Fridays.",
+    expected: [],
+    untouched: [
+      "Yesterday my friend said",
+      "I'm taking the bus this week",
+      "It helps her to relax",
+      "I'm feeling better, too",
+      "We still walk home together on Fridays",
+    ],
   },
 ];
 
@@ -137,19 +180,32 @@ const overlaps = (text: string, a: string, b: string) => {
   return as >= 0 && bs >= 0 && as < bs + b.length && bs < as + a.length;
 };
 let found = 0,
+  repaired = 0,
   total = 0,
   wrongFlags = 0;
 FIXTURES.forEach((fixture, index) => {
   const mine = items.filter((item) => item.question === index + 1);
-  console.log(`\nQ${index + 1} (${fixture.type})`);
-  for (const anchor of fixture.expected) {
+  const applied = correctedTranscript(fixture.transcript, mine);
+  console.log(`\nQ${index + 1} (${fixture.type})\n  Final: ${applied.text}`);
+  for (const [anchor, accepted] of fixture.expected) {
     total++;
-    const hit = mine.find((item) =>
-      overlaps(fixture.transcript, item.original, anchor),
+    const hit = mine.find(
+      (item) =>
+        item.kind === "error" &&
+        overlaps(fixture.transcript, item.original, anchor),
     );
     if (hit) found++;
+    const sentence =
+      hit && sentenceContext(fixture.transcript, hit, mine)?.correctedSentence;
+    const wholeWords = new RegExp(
+      `\\b(?:${accepted.source})\\b`,
+      accepted.flags,
+    );
+    const fixed =
+      sentence && applied.text.includes(sentence) && wholeWords.test(sentence);
+    if (fixed) repaired++;
     console.log(
-      `  ${hit ? "found " : "MISSED"} ${anchor}${hit ? `  ←  "${hit.original}" → "${hit.corrected}" [${hit.concepts.join(", ")}]` : ""}`,
+      `  ${fixed ? "FIXED " : hit ? "REVIEW" : "MISSED"} ${anchor}${hit ? `  ←  "${hit.original}" → "${hit.corrected}" [${hit.concepts.join(", ")}]` : ""}`,
     );
   }
   for (const text of fixture.untouched) {
@@ -157,15 +213,21 @@ FIXTURES.forEach((fixture, index) => {
       overlaps(fixture.transcript, item.original, text),
     );
     for (const item of flagged) {
-      if (item.kind === "error") wrongFlags++;
+      const sharesErrorSpan = fixture.expected.some(([anchor]) =>
+        overlaps(fixture.transcript, item.original, anchor),
+      );
+      const wrong =
+        item.kind === "error" &&
+        (!sharesErrorSpan || !applied.text.includes(text));
+      if (wrong) wrongFlags++;
       console.log(
-        `  ${item.kind === "error" ? "WRONG " : "note  "} flagged correct text "${item.original}" → ${item.corrected} (${item.kind})`,
+        `  ${wrong ? "WRONG " : "note  "} overlaps protected text "${item.original}" → ${item.corrected} (${item.kind})`,
       );
     }
   }
   const extra = mine.filter(
     (item) =>
-      !fixture.expected.some((anchor) =>
+      !fixture.expected.some(([anchor]) =>
         overlaps(fixture.transcript, item.original, anchor),
       ) &&
       !fixture.untouched.some((text) =>
@@ -177,9 +239,8 @@ FIXTURES.forEach((fixture, index) => {
       `  extra  ${item.original} → ${item.corrected} (${item.kind}) — review by hand`,
     );
 });
-const recall = found / total;
 console.log(
-  `\nRecall ${found}/${total} (${Math.round(recall * 100)}%), wrong error flags on correct text: ${wrongFlags}`,
+  `\nLocated ${found}/${total}, reference repairs in the final answers ${repaired}/${total}, wrong error flags on protected text: ${wrongFlags}. Review other valid paraphrases by hand.`,
 );
 db().close();
-process.exit(recall >= 0.8 && wrongFlags === 0 ? 0 : 1);
+process.exit(repaired === total && wrongFlags === 0 ? 0 : 1);

@@ -5,7 +5,11 @@ import {
   getGrammarConcept,
   type GrammarConceptId,
 } from "./grammar-concepts";
-import { correctedTranscript } from "./corrected-transcript";
+import {
+  correctedTranscript,
+  correctionStart,
+  excerptStart,
+} from "./corrected-transcript";
 
 export type GrammarOccurrence = {
   examId: string;
@@ -20,7 +24,7 @@ export type GrammarOccurrence = {
   transcriptionDoubt: boolean;
   // The learner's whole sentence, and the same sentence with its fixes applied.
   sentence: string;
-  correctedSentence: string;
+  correctedSentence: string | null;
   // Every span the corrected sentence changes, so a drill can mark them all.
   highlights: string[];
 };
@@ -81,6 +85,7 @@ export function grammarProfile(exams: Exam[]): GrammarProfile {
   >();
   units.forEach((unit, order) => {
     for (const item of unit.items) {
+      if (item.transcriptionDoubt) continue;
       for (const id of item.concepts || []) {
         if (!getGrammarConcept(id)) continue;
         const stat = stats.get(id) || {
@@ -114,8 +119,14 @@ export function grammarProfile(exams: Exam[]): GrammarProfile {
           ? 0
           : units
               .slice(lastErrorUnit + 1)
-              .filter((unit) =>
-                conceptHasOpportunity(concept, unit.question.type),
+              .filter(
+                (unit) =>
+                  conceptHasOpportunity(concept, unit.question.type) &&
+                  !unit.items.some(
+                    (item) =>
+                      item.transcriptionDoubt &&
+                      item.concepts?.includes(concept.id),
+                  ),
               ).length;
       const answersWithError = errorUnits.size;
       const status: ConceptStatus =
@@ -171,7 +182,7 @@ export function sentenceContext(
   item: GrammarItem,
   answerItems: GrammarItem[],
 ) {
-  const start = transcript.indexOf(item.original);
+  const start = correctionStart(transcript, item);
   if (start < 0) return null;
   const [from, to] = sentenceRange(
     transcript,
@@ -179,22 +190,28 @@ export function sentenceContext(
     start + item.original.length,
   );
   const sentence = transcript.slice(from, to).trim();
-  const same = (other: GrammarItem) =>
-    other === item ||
-    (other.original === item.original && other.corrected === item.corrected);
-  const fixes = answerItems
-    .filter((other) => {
-      const position = transcript.indexOf(other.original);
-      return (
-        (other.kind === "error" || same(other)) &&
-        position >= from &&
-        position + other.original.length <= to
-      );
-    })
-    .map((other) => ({ ...other, kind: "error" as const }));
+  const fixes: GrammarItem[] = [];
+  for (const other of answerItems) {
+    const position = correctionStart(transcript, other);
+    const selected =
+      position === start &&
+      other.original === item.original &&
+      other.corrected === item.corrected;
+    if (other.kind !== "error" && !selected) continue;
+    if (position < 0) {
+      if (excerptStart(sentence, other.original) >= 0) return null;
+      continue;
+    }
+    const end = position + other.original.length;
+    if (position >= to || end <= from) continue;
+    if (position < from || end > to) return null;
+    fixes.push({ ...other, originalStart: position - from, kind: "error" });
+  }
+  const corrected = correctedTranscript(sentence, fixes);
+  if (corrected.skipped || !corrected.applied) return null;
   return {
     sentence,
-    correctedSentence: correctedTranscript(sentence, fixes).text,
+    correctedSentence: corrected.text,
     highlights: fixes.map((fix) => fix.original),
   };
 }
@@ -207,7 +224,7 @@ function occurrence(
 ): GrammarOccurrence {
   const context = sentenceContext(transcript, item, answerItems) || {
     sentence: item.original,
-    correctedSentence: item.corrected,
+    correctedSentence: null,
     highlights: [item.original],
   };
   const question = exam.questions[item.question - 1];
@@ -242,7 +259,7 @@ export function sentenceRange(text: string, start: number, end: number) {
 export function conceptCounts(items: GrammarItem[]) {
   const counts = new Map<GrammarConceptId, number>();
   for (const item of items)
-    if (item.kind === "error")
+    if (item.kind === "error" && !item.transcriptionDoubt)
       for (const id of item.concepts || [])
         counts.set(id, (counts.get(id) || 0) + 1);
   return [...counts.entries()].sort((a, b) => b[1] - a[1]);

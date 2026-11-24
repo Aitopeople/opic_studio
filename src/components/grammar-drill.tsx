@@ -15,18 +15,22 @@ type Result = "correct" | "different" | "revealed";
 // Learners rewrite their own sentences; checking is local and never calls AI.
 export function GrammarDrill({ items }: { items: GrammarOccurrence[] }) {
   const seen = new Set<string>();
-  const drills = items.filter((item) => {
-    const key = `${item.examId}|${item.question}|${item.sentence}`;
-    if (
-      item.kind !== "error" ||
-      !item.sentence ||
-      item.correctedSentence === item.sentence ||
-      seen.has(key)
-    )
-      return false;
-    seen.add(key);
-    return true;
-  });
+  const drills = items.filter(
+    (item): item is GrammarOccurrence & { correctedSentence: string } => {
+      const key = `${item.examId}|${item.question}|${item.sentence}`;
+      if (
+        item.kind !== "error" ||
+        item.transcriptionDoubt ||
+        !item.correctedSentence ||
+        !item.sentence ||
+        item.correctedSentence === item.sentence ||
+        seen.has(key)
+      )
+        return false;
+      seen.add(key);
+      return true;
+    },
+  );
   const [index, setIndex] = useState(0),
     [draft, setDraft] = useState(""),
     [result, setResult] = useState<Result | null>(null),

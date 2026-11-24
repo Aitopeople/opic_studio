@@ -60,8 +60,19 @@ export type Answer = {
   transcriptSource: "pending" | "browser" | "manual" | "gpt";
   skipped: boolean;
 };
+export type VocabularySuggestion = {
+  question: number;
+  quote: string;
+  phrase: string;
+  meaning: string;
+  reason: string;
+  example: string;
+  practice: string;
+};
+
 export type Evaluation = {
   targetFeedback?: TargetFeedback;
+  vocabulary?: VocabularySuggestion[];
   range: string;
   confidence: "low" | "medium";
   summary: string;
@@ -78,6 +89,7 @@ export type Evaluation = {
   grammar?: {
     question: number;
     original: string;
+    originalStart?: number;
     corrected: string;
     explanation: string;
     category: string;

@@ -175,7 +175,7 @@ export function GrammarNotes({
                     {profile.unchecked.length
                       ? "위 기록에서 문법을 다시 점검하면 오류가 개념별로 모여요."
                       : profile.checkedAnswers
-                        ? "점검한 답변에서 문법 오류가 나오지 않았어요."
+                        ? "지금까지 점검에서 확인된 문법 오류가 없어요."
                         : "답변을 녹음하고 AI 평가를 받으면 문법 오류가 개념별로 모여요."}
                   </EmptyDescription>
                 </EmptyHeader>

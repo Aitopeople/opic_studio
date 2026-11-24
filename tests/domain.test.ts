@@ -68,6 +68,36 @@ test("15 and 12 question plans have a warmup, selected topic combos, and rolepla
     assert.equal(new Set(set.map((q) => q.prompt)).size, set.length);
   }
 });
+test("combo tasks vary within each test and closing questions explore a fresh topic", () => {
+  for (const difficulty of [1, 2, 3, 4, 5, 6]) {
+    for (const draw of [0, 0.31, 0.68, 0.99]) {
+      const set = createQuestionSet({ ...config, difficulty }, () => draw);
+      const tasks = set.map((q) => q.type);
+      assert.notDeepEqual(tasks.slice(1, 4), tasks.slice(4, 7));
+      assert.deepEqual(tasks.slice(10, 13), ["roleplay", "solution", "past"]);
+      assert.equal(set[10].topic, set[12].topic);
+      assert.equal(set[13].topic, set[14].topic);
+      assert.ok(config.topics.includes(set[13].topic));
+      assert.ok(set.slice(0, 13).every((q) => q.topic !== set[13].topic));
+      assert.equal(new Set(set.map((q) => q.prompt)).size, set.length);
+      if (difficulty >= 5)
+        assert.deepEqual(tasks.slice(13), ["comparison", "opinion"]);
+    }
+  }
+});
+
+test("short practice surveys fill gaps without asking about ineligible work or school", () => {
+  const set = createQuestionSet({
+    ...config,
+    mode: "practice",
+    topics: ["work", "study", "home"],
+  });
+  assert.equal(set.length, config.count);
+  assert.equal(set[1].topic, "home");
+  assert.ok(set.every((q) => q.topic !== "work" && q.topic !== "study"));
+  assert.equal(new Set(set.map((q) => q.id)).size, set.length);
+});
+
 test("surveys require 12 distinct interests in simulation, 3 in practice", () => {
   assert.ok(examConfigSchema.safeParse(config).success);
   assert.ok(
