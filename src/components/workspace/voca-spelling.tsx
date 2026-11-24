@@ -16,6 +16,7 @@ import {
   matchesWord,
   spellingAnswer,
   spellingLetters,
+  spellingTemplate,
   wordSeconds,
   type VocaRound,
 } from "@/lib/voca-quiz";
@@ -37,10 +38,8 @@ export function VocaSpelling({
   nextLabel: string;
 }) {
   const letters = spellingLetters(word.english);
-  const count = letters.length;
-  const words = word.english.trim().normalize("NFKC").split(/\s+/u);
-  const [value, setValue] = useState(
-    spellingLetters(round.lastGuess ?? round.response ?? "").slice(0, count),
+  const [value, setValue] = useState(() =>
+    spellingLetters(round.lastGuess ?? round.response ?? ""),
   );
   const [hint, setHint] = useState(false);
   const [selection, setSelection] = useState(0);
@@ -57,7 +56,12 @@ export function VocaSpelling({
   const won = done && matchesWord(word, response);
   const wrong = !done && Boolean(value && round.lastGuess === value);
   const urgent = seconds <= 5;
-  const shown = won ? spellingLetters(response).slice(0, count) : value;
+  const template = won
+    ? response
+    : (spellingTemplate(word, value) ?? word.english);
+  const words = template.trim().normalize("NFKC").split(/\s+/u);
+  const count = spellingLetters(template).length;
+  const shown = won ? spellingLetters(response) : value;
   const phase = won ? "won" : wrong || done ? "miss" : "playing";
   const startClock = useEffectEvent(onStartClock);
   const expire = useEffectEvent(() => onAnswer(null));
@@ -150,17 +154,14 @@ export function VocaSpelling({
             lang="en"
             type="text"
             inputMode="text"
-            maxLength={count}
             className="sr-only"
             value={value}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             onSelect={(e) => setSelection(e.currentTarget.selectionStart ?? 0)}
             onChange={(e) => {
-              const text = spellingLetters(e.currentTarget.value).slice(
-                0,
-                count,
-              );
+              const text = spellingLetters(e.currentTarget.value);
+              if (!spellingTemplate(word, text)) return;
               setValue(text);
               setSelection(
                 Math.min(
@@ -174,10 +175,26 @@ export function VocaSpelling({
               const field = e.currentTarget;
               const from = field.selectionStart ?? value.length;
               const to = field.selectionEnd ?? from;
-              const pasted = spellingLetters(
+              const before = value.slice(0, from);
+              const after = value.slice(to);
+              const maxLength = Math.max(
+                letters.length,
+                ...(word.alternatives ?? []).map(
+                  (answer) => spellingLetters(answer).length,
+                ),
+              );
+              let pasted = spellingLetters(
                 e.clipboardData.getData("text"),
-              ).slice(0, count - value.length + to - from);
-              setValue(value.slice(0, from) + pasted + value.slice(to));
+              ).slice(0, maxLength - before.length - after.length);
+              while (
+                pasted &&
+                !spellingTemplate(word, before + pasted + after)
+              ) {
+                pasted = pasted.slice(0, -1);
+              }
+              const next = before + pasted + after;
+              if (!spellingTemplate(word, next)) return;
+              setValue(next);
               requestAnimationFrame(() =>
                 field.setSelectionRange(
                   from + pasted.length,

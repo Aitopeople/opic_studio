@@ -55,6 +55,16 @@ export function spellingLetters(text: string) {
   return text.normalize("NFKC").replace(/[^\p{L}\p{N}]/gu, "");
 }
 
+// Keep the original blanks until the learner types past them using a known answer.
+export function spellingTemplate(word: VocaWord, letters: string) {
+  if (letters.length <= spellingLetters(word.english).length)
+    return word.english;
+  const prefix = letters.toLowerCase();
+  return word.alternatives?.find((answer) =>
+    spellingLetters(answer).toLowerCase().startsWith(prefix),
+  );
+}
+
 export function spellingAnswer(word: VocaWord, input: string) {
   const letters = spellingLetters(input).toLowerCase();
   return (

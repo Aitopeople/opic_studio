@@ -454,7 +454,7 @@ export function VocaPage({ userId }: { userId?: string }) {
                 <ChevronLeft />
               </Button>
               <span aria-hidden="true" className="h-4 w-px bg-border" />
-              <div className="mx-2 grid grid-cols-[3ch_auto_3ch] items-center gap-0.5 text-center text-sm leading-5 tabular-nums">
+              <div className="mx-2 grid grid-cols-[3ch_auto_3ch] items-center gap-0.5 text-center text-base leading-5 tabular-nums sm:text-sm">
                 <input
                   aria-label="현재 페이지"
                   aria-description={`1부터 ${pages}까지 입력하고 Enter로 이동하세요.`}
@@ -470,12 +470,15 @@ export function VocaPage({ userId }: { userId?: string }) {
                       setPageInput(event.target.value);
                   }}
                   onKeyDown={(event) => {
-                    if (event.key === "Escape") event.currentTarget.blur();
-                    if (event.key !== "Enter") return;
+                    if (event.key !== "Enter" && event.key !== "Escape") return;
                     event.preventDefault();
-                    if (pageInput)
+                    if (event.key === "Enter" && pageInput)
                       setPage(Math.min(pages, Math.max(1, Number(pageInput))));
-                    event.currentTarget.blur();
+                    setPageInput(null);
+                    const field = event.currentTarget;
+                    requestAnimationFrame(() => {
+                      if (document.activeElement === field) field.select();
+                    });
                   }}
                   onBlur={() => setPageInput(null)}
                 />
@@ -552,7 +555,7 @@ export function VocaPage({ userId }: { userId?: string }) {
                 ? "추천 표현을 불러오지 못했어요. 잠시 후 다시 열어 주세요."
                 : personal === null
                   ? "추천 표현을 불러오는 중…"
-                  : "말하기 연습을 마치면 내 답변에서 추천받은 표현이 여기에 모입니다."}
+                  : "학습 기록에서 내 답변의 AI 평가를 받아 보세요. 평가에서 추천한 표현이 여기에 모입니다."}
             </p>
           )}
         </TabsContent>

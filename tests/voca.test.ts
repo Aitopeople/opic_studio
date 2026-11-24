@@ -7,6 +7,7 @@ import {
   nextWord,
   spellingAnswer,
   spellingLetters,
+  spellingTemplate,
   startReview,
   startStudy,
   startWordClock,
@@ -67,6 +68,22 @@ test("spelling slots supply separators and accept alternative spellings", () => 
     alternatives: ["neighbourhood"],
   };
   assert.equal(matchesWord(word, spellingAnswer(word, "NEIGHBOURHOOD")), true);
+});
+
+test("all registered spellings fit the board and unrelated extra letters are rejected", () => {
+  for (const word of VOCA_WORDS) {
+    const length = spellingLetters(word.english).length;
+    assert.equal(spellingTemplate(word, ""), word.english);
+    assert.equal(spellingTemplate(word, "0".repeat(length + 1)), undefined);
+    for (const answer of [word.english, ...(word.alternatives ?? [])]) {
+      const letters = spellingLetters(answer).toUpperCase();
+      for (let n = 1; n <= letters.length; n++) {
+        const template = spellingTemplate(word, letters.slice(0, n));
+        assert.ok(template && spellingLetters(template).length >= n, answer);
+      }
+      assert.ok(matchesWord(word, spellingAnswer(word, letters)), answer);
+    }
+  }
 });
 
 test("study sets prioritize personal expressions and cycle without duplicates", () => {
