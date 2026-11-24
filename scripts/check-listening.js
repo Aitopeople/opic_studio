@@ -50,7 +50,7 @@ async function checkListening(page) {
       .click();
     let speech = await lastSpeech();
     ensure(
-      speech.text === "I went to Busan with my friends." &&
+      speech.text === "Last summer, I went to Busan with my friends." &&
         Math.abs(speech.rate - 0.9) < 0.001 &&
         speech.lang === "en-US",
       "must speak corrected English at the selected speed",
@@ -70,16 +70,20 @@ async function checkListening(page) {
         .getAttribute("aria-pressed")) === "false",
       "previous sentence must stop",
     );
+    const secondSentence = await cards
+      .nth(1)
+      .locator("p.grammar-corrected")
+      .innerText();
     ensure(
-      (await lastSpeech()).text === "many pictures",
+      secondSentence.includes("many pictures") &&
+        (await lastSpeech()).text === secondSentence,
       "new sentence must replace previous speech",
     );
-    await tab
-      .getByRole("combobox", { name: "교정문 읽기 속도" })
-      .selectOption("0.75");
+    await tab.getByRole("combobox", { name: "교정문 읽기 속도" }).click();
+    await tab.getByRole("option", { name: "0.75×", exact: true }).click();
     speech = await lastSpeech();
     ensure(
-      speech.text === "many pictures" && speech.rate === 0.75,
+      speech.text === secondSentence && speech.rate === 0.75,
       "changing speed must restart the current text at the new rate",
     );
     await cards
@@ -126,7 +130,7 @@ async function checkListening(page) {
     );
     await cards
       .nth(0)
-      .locator(".grammar-corrected")
+      .locator("p.grammar-corrected")
       .evaluate((element) => {
         const range = document.createRange();
         range.selectNodeContents(element);
@@ -146,8 +150,14 @@ async function checkListening(page) {
     await tab
       .getByRole("button", { name: "표현 제안 듣기", exact: true })
       .click();
+    const suggestedSentence = await tab
+      .locator(".grammar-card")
+      .filter({ has: tab.getByRole("button", { name: "표현 제안 듣기 정지" }) })
+      .locator("p.grammar-corrected")
+      .innerText();
     ensure(
-      (await lastSpeech()).text === "I had a great time on the trip.",
+      suggestedSentence.includes("I had a great time on the trip.") &&
+        (await lastSpeech()).text === suggestedSentence,
       "optional suggestions must also be audible",
     );
     const full = tab.locator('[data-slot="card"]').filter({

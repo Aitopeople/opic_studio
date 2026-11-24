@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -16,7 +16,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Toggle } from "@/components/ui/toggle";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
-import { NativeSelect } from "@/components/ui/native-select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { englishVoice, loadVoices } from "@/lib/speech";
 import { HStack, VStack, Grid, GridItem } from "@/components/layout/stack";
@@ -50,6 +56,39 @@ export const defaultConfig: ExamConfig = {
   student: "아니요",
   residence: "가족과 거주",
 };
+function SetupSelect({
+  label,
+  value,
+  onValueChange,
+  options,
+  optionLabels,
+}: {
+  label: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  options: string[];
+  optionLabels?: Record<string, string>;
+}) {
+  const id = useId();
+  return (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <Select value={value} onValueChange={onValueChange}>
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent position="popper" align="start" collisionPadding={12}>
+          {options.map((option) => (
+            <SelectItem key={option} value={option}>
+              {optionLabels?.[option] ?? option}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 export function Setup({
   mode,
   initialQuestionId,
@@ -78,6 +117,14 @@ export function Setup({
     [samplePlayed, setSamplePlayed] = useState(false);
   const [orientationLeft, setOrientationLeft] = useState(20 * 60);
   const recorder = useRecorder();
+  const stepHeading = useRef<HTMLHeadingElement>(null);
+  const previousStep = useRef(step);
+  useLayoutEffect(() => {
+    if (previousStep.current === step) return;
+    previousStep.current = step;
+    stepHeading.current?.focus({ preventScroll: true });
+    stepHeading.current?.scrollIntoView({ block: "start" });
+  }, [step]);
   useEffect(() => {
     const start = Date.now();
     const timer = setInterval(
@@ -134,7 +181,12 @@ export function Setup({
       )}
       <ol className="setup-steps">
         {steps.map((name, i) => (
-          <li key={name} data-active={i === step} data-complete={i < step}>
+          <li
+            key={name}
+            aria-current={i === step ? "step" : undefined}
+            data-active={i === step}
+            data-complete={i < step}
+          >
             <span>{i < step ? <Check size={14} /> : `0${i + 1}`}</span>
             <strong>{name}</strong>
           </li>
@@ -146,7 +198,9 @@ export function Setup({
             {step === 0 && (
               <VStack gap={8}>
                 <VStack gap={2}>
-                  <h2>배경 설문</h2>
+                  <h2 tabIndex={-1} ref={stepHeading} className="scroll-mt-20">
+                    배경 설문
+                  </h2>
                   <p className="text-subtle">
                     실제 경험에 가까운 항목을 선택해 주세요. 설문은 연습용으로
                     재구성했습니다.
@@ -154,44 +208,28 @@ export function Setup({
                 </VStack>
                 <Grid>
                   <GridItem span={6}>
-                    <label className="field [&_[data-slot=native-select-wrapper]]:w-full">
-                      현재 하는 일
-                      <NativeSelect
-                        value={config.occupation}
-                        onChange={(e) => update("occupation", e.target.value)}
-                      >
-                        {["직장인", "학생", "일 경험 없음", "기타"].map((x) => (
-                          <option key={x}>{x}</option>
-                        ))}
-                      </NativeSelect>
-                    </label>
+                    <SetupSelect
+                      label="현재 하는 일"
+                      value={config.occupation}
+                      onValueChange={(value) => update("occupation", value)}
+                      options={["직장인", "학생", "일 경험 없음", "기타"]}
+                    />
                   </GridItem>
                   <GridItem span={6}>
-                    <label className="field [&_[data-slot=native-select-wrapper]]:w-full">
-                      현재 학생인가요?
-                      <NativeSelect
-                        value={config.student}
-                        onChange={(e) => update("student", e.target.value)}
-                      >
-                        <option>아니요</option>
-                        <option>예</option>
-                      </NativeSelect>
-                    </label>
+                    <SetupSelect
+                      label="현재 학생인가요?"
+                      value={config.student}
+                      onValueChange={(value) => update("student", value)}
+                      options={["아니요", "예"]}
+                    />
                   </GridItem>
                   <GridItem span={12}>
-                    <label className="field [&_[data-slot=native-select-wrapper]]:w-full">
-                      어디에 살고 있나요?
-                      <NativeSelect
-                        value={config.residence}
-                        onChange={(e) => update("residence", e.target.value)}
-                      >
-                        {["가족과 거주", "혼자 거주", "기숙사·공동 주거"].map(
-                          (x) => (
-                            <option key={x}>{x}</option>
-                          ),
-                        )}
-                      </NativeSelect>
-                    </label>
+                    <SetupSelect
+                      label="어디에 살고 있나요?"
+                      value={config.residence}
+                      onValueChange={(value) => update("residence", value)}
+                      options={["가족과 거주", "혼자 거주", "기숙사·공동 주거"]}
+                    />
                   </GridItem>
                 </Grid>
                 <VStack gap={4}>
@@ -238,23 +276,20 @@ export function Setup({
             {step === 1 && (
               <VStack gap={8}>
                 <VStack gap={2}>
-                  <h2>지금의 말하기 수준을 알려주세요.</h2>
+                  <h2 tabIndex={-1} ref={stepHeading} className="scroll-mt-20">
+                    지금의 말하기 수준을 알려주세요.
+                  </h2>
                   <p className="text-subtle">
                     목표 등급과 난이도는 별개입니다. 어려운 질문이 높은 등급을
                     보장하지 않습니다.
                   </p>
                 </VStack>
-                <label className="field [&_[data-slot=native-select-wrapper]]:w-full">
-                  목표 등급
-                  <NativeSelect
-                    value={config.target}
-                    onChange={(e) => update("target", e.target.value)}
-                  >
-                    {["IL", "IM1", "IM2", "IM3", "IH", "AL"].map((g) => (
-                      <option key={g}>{g}</option>
-                    ))}
-                  </NativeSelect>
-                </label>
+                <SetupSelect
+                  label="목표 등급"
+                  value={config.target}
+                  onValueChange={(value) => update("target", value)}
+                  options={["IL", "IM1", "IM2", "IM3", "IH", "AL"]}
+                />
                 <RadioGroup
                   value={String(config.difficulty)}
                   aria-label="자기평가 난이도"
@@ -279,26 +314,27 @@ export function Setup({
                       key={text}
                     >
                       <span className="level-number">{i + 1}</span>
-                      <span>{text}</span>
+                      <span id={`difficulty-description-${i + 1}`}>{text}</span>
                       <RadioGroupItem
                         value={String(i + 1)}
                         aria-label={`${i + 1}단계`}
+                        aria-describedby={`difficulty-description-${i + 1}`}
                       />
                     </label>
                   ))}
                 </RadioGroup>
-                <label className="field [&_[data-slot=native-select-wrapper]]:w-full">
-                  연습 문항 수
-                  <NativeSelect
-                    value={config.count}
-                    onChange={(e) =>
-                      update("count", Number(e.target.value) as 12 | 15)
-                    }
-                  >
-                    <option value={15}>15문항 · 7 + 8</option>
-                    <option value={12}>12문항 · 7 + 5</option>
-                  </NativeSelect>
-                </label>
+                <SetupSelect
+                  label="연습 문항 수"
+                  value={String(config.count)}
+                  onValueChange={(value) =>
+                    update("count", Number(value) as 12 | 15)
+                  }
+                  options={["15", "12"]}
+                  optionLabels={{
+                    "15": "15문항 · 7 + 8",
+                    "12": "12문항 · 7 + 5",
+                  }}
+                />
                 <p className="caption">
                   실제 문항 수는 자기평가에 따라 정해집니다. 여기서는 준비를
                   위해 직접 바꿀 수 있습니다.
@@ -308,7 +344,9 @@ export function Setup({
             {step === 2 && (
               <VStack gap={8}>
                 <VStack gap={2}>
-                  <h2>장비 점검</h2>
+                  <h2 tabIndex={-1} ref={stepHeading} className="scroll-mt-20">
+                    장비 점검
+                  </h2>
                   <p className="text-subtle">
                     조용한 곳에서 헤드셋을 착용해 주세요. 점검 녹음은 업로드되지
                     않습니다.
@@ -405,7 +443,9 @@ export function Setup({
             {step === 3 && (
               <VStack gap={8}>
                 <VStack gap={2}>
-                  <h2>시험 안내</h2>
+                  <h2 tabIndex={-1} ref={stepHeading} className="scroll-mt-20">
+                    시험 안내
+                  </h2>
                   <p className="text-subtle">
                     완벽한 문장보다, 나의 이야기에 집중해 보세요.
                   </p>

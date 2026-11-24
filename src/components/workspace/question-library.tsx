@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,18 @@ export function QuestionLibrary({
   );
   const pages = Math.max(1, Math.ceil(filtered.length / 12)),
     current = Math.min(page, pages);
+  const resultsHeading = useRef<HTMLHeadingElement>(null);
+  const focusPage = useRef(false);
+  function goToPage(number: number) {
+    focusPage.current = true;
+    setPage(number);
+  }
+  useLayoutEffect(() => {
+    if (!focusPage.current) return;
+    focusPage.current = false;
+    resultsHeading.current?.focus({ preventScroll: true });
+    resultsHeading.current?.scrollIntoView({ block: "start" });
+  }, [page]);
   function reset() {
     setSearch("");
     setType("all");
@@ -148,9 +160,16 @@ export function QuestionLibrary({
       </div>
       <section className="space-y-4" aria-label="연습 문제">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-muted-foreground" role="status">
-            {filtered.length}개의 연습 문제
-          </p>
+          <div role="status">
+            <h2
+              ref={resultsHeading}
+              tabIndex={-1}
+              className="scroll-mt-20 text-sm font-normal text-muted-foreground"
+            >
+              {filtered.length}개의 연습 문제
+              {pages > 1 && <span className="sr-only">, {current}페이지</span>}
+            </h2>
+          </div>
           <p className="text-xs text-muted-foreground">
             실제 기출 원문이 아닌 자체 제작 문항
           </p>
@@ -214,7 +233,7 @@ export function QuestionLibrary({
                     onClick={(e) => {
                       e.preventDefault();
                       if (current === 1) return;
-                      setPage(current - 1);
+                      goToPage(current - 1);
                     }}
                   >
                     <ChevronLeft />
@@ -233,7 +252,7 @@ export function QuestionLibrary({
                     onClick={(e) => {
                       e.preventDefault();
                       if (current === pages) return;
-                      setPage(current + 1);
+                      goToPage(current + 1);
                     }}
                   >
                     다음

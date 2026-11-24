@@ -12,7 +12,13 @@ import {
 import { Square, Volume2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
-import { NativeSelect } from "./ui/native-select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 import { englishVoice, speechChunks } from "@/lib/speech";
 
 type Playback = {
@@ -290,16 +296,23 @@ export function SpeechPlaybackSettings() {
           <Label htmlFor={id} className="text-xs">
             속도
           </Label>
-          <NativeSelect
-            id={id}
-            aria-label="교정문 읽기 속도"
-            value={rate}
-            onChange={(event) => changeRate(Number(event.target.value))}
+          <Select
+            value={String(rate)}
+            onValueChange={(value) => changeRate(Number(value))}
           >
-            <option value={0.75}>0.75×</option>
-            <option value={0.9}>0.9×</option>
-            <option value={1}>1.0×</option>
-          </NativeSelect>
+            <SelectTrigger id={id} aria-label="교정문 읽기 속도">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent
+              position="popper"
+              align="start"
+              collisionPadding={12}
+            >
+              <SelectItem value="0.75">0.75×</SelectItem>
+              <SelectItem value="0.9">0.9×</SelectItem>
+              <SelectItem value="1">1.0×</SelectItem>
+            </SelectContent>
+          </Select>
           <Button
             size="sm"
             variant="ghost"

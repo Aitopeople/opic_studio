@@ -141,10 +141,65 @@ async function checkUi(page) {
       path: "output/playwright/survey.png",
       fullPage: true,
     });
+    await tab.setViewportSize({ width: 320, height: 780 });
+    const occupation = tab.getByRole("combobox", {
+      name: "현재 하는 일",
+      exact: true,
+    });
+    await occupation.click();
+    await tab.getByRole("option", { name: "직장인", exact: true }).click();
+    const headingInView = (el) => {
+      const rect = el.getBoundingClientRect();
+      const topbar = document
+        .querySelector(".workspace-topbar")
+        .getBoundingClientRect();
+      return (
+        document.activeElement === el &&
+        rect.top >= topbar.bottom &&
+        rect.bottom <= innerHeight
+      );
+    };
     await tab.getByRole("button", { name: "다음 단계", exact: true }).click();
     await tab
       .getByRole("heading", { name: "지금의 말하기 수준을 알려주세요." })
       .waitFor();
+    ensure(
+      await tab
+        .getByRole("heading", { name: "지금의 말하기 수준을 알려주세요." })
+        .evaluate(headingInView),
+      "new step heading must be focused and visible",
+    );
+    ensure(
+      (await tab.locator('[aria-current="step"]').innerText()).includes(
+        "자기평가",
+      ),
+      "step progress must announce self-assessment",
+    );
+    const levels = tab.getByRole("radio");
+    ensure(
+      (await levels.count()) === 6 &&
+        (await levels.evaluateAll((items) =>
+          items.every((item) =>
+            document
+              .getElementById(item.getAttribute("aria-describedby"))
+              ?.textContent.trim(),
+          ),
+        )),
+      "each level must describe its speaking ability",
+    );
+    await tab.getByRole("button", { name: "이전 단계" }).click();
+    ensure(
+      await tab
+        .getByRole("heading", { name: "배경 설문", exact: true })
+        .evaluate(headingInView),
+      "back must focus the previous step",
+    );
+    ensure(
+      (await occupation.innerText()).includes("직장인"),
+      "changing steps must preserve survey choices",
+    );
+    await tab.getByRole("button", { name: "다음 단계", exact: true }).click();
+    await tab.setViewportSize({ width: 1440, height: 1080 });
     await tab.getByRole("button", { name: "다음 단계", exact: true }).click();
     await tab.getByRole("button", { name: "테스트 음성 듣기" }).click();
     await tab.getByRole("checkbox", { name: "소리가 잘 들립니다." }).check();
@@ -221,7 +276,7 @@ async function checkUi(page) {
         .locator(".grid-item")
         .filter({ has: tab.locator(".metric-card") })
         .first()
-          .evaluate((el) => getComputedStyle(el).gridColumnStart)) === "span 3",
+        .evaluate((el) => getComputedStyle(el).gridColumnStart)) === "span 3",
       "desktop review metrics must occupy four equal columns",
     );
     ensure(
@@ -266,7 +321,29 @@ async function checkUi(page) {
       .getByRole("button", { name: "문제 라이브러리", exact: true })
       .first()
       .click();
-    await tab.getByRole("textbox", { name: "문제 검색" }).fill("카페");
+    await tab.setViewportSize({ width: 320, height: 780 });
+    await tab.getByRole("link", { name: "다음 페이지" }).click();
+    ensure(
+      await tab
+        .getByRole("heading", { name: /연습 문제.*2페이지/ })
+        .evaluate(headingInView),
+      "paging must focus the new results below the header",
+    );
+    const firstRow = await tab
+      .locator(".question-library-row")
+      .first()
+      .boundingBox();
+    ensure(
+      firstRow.y >= 0 && firstRow.y + firstRow.height <= 780,
+      "first question on the new page must be visible",
+    );
+    const search = tab.getByRole("textbox", { name: "문제 검색" });
+    await search.fill("카페");
+    ensure(
+      await search.evaluate((el) => el === document.activeElement),
+      "filtering from page two must keep search focus",
+    );
+    await tab.setViewportSize({ width: 1440, height: 1080 });
     ensure(
       (await tab.locator(".question-library-row").count()) > 0,
       "library search should match Korean topic names",
